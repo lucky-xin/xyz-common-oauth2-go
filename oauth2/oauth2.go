@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,11 @@ func NewWithTokenResolver(tokenResolver TokenResolver) *Checker {
 }
 
 func (check *Checker) GetTokenKey() ([]byte, error) {
+	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
+	if tk != "" {
+		return []byte(tk), nil
+	}
+
 	cacheKey := "token_key"
 	var tokenKeyBytes []byte
 	if val, ex := check.cache.Get(cacheKey); !ex {
@@ -46,10 +52,14 @@ func (check *Checker) GetTokenKey() ([]byte, error) {
 			tokenKeyBytes = val.([]byte)
 			return tokenKeyBytes, nil
 		}
+
+		oauth2TokenKeyUrl := env.GetString("OAUTH2_ENDPOINT", "") + "/oauth2/octet-key"
 		appId := env.GetString("APP_ID", "")
 		appSecret := env.GetString("APP_SECRET", "")
-		oauth2TokenKeyUrl := env.GetString("OAUTH2_ENDPOINT", "") + "/oauth2/octet-key"
-		timestamp, sgn := sign.SignWithTimestamp(appSecret, "")
+		var timestamp, sgn string
+		if appId != "" && appSecret != "" {
+			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
+		}
 		if respBytes, err := Get(oauth2TokenKeyUrl, sgn, appId, timestamp); err != nil {
 			return nil, err
 		} else {
@@ -57,16 +67,26 @@ func (check *Checker) GetTokenKey() ([]byte, error) {
 			err = json.Unmarshal(respBytes, keyInf)
 			data := keyInf.BizData
 			base64TokenKey := data.Key
-			er := aescbc.Encryptor{
-				Key: env.GetString("AES_KEY", ""),
-				Iv:  env.GetString("AES_IV", ""),
-			}
-			if decryptTokenKey, err := er.Decrypt(base64TokenKey); err != nil {
-				return nil, err
+
+			aesKey := env.GetString("AES_KEY", "")
+			aesIv := env.GetString("AES_KEY", "")
+			if aesKey != "" && aesIv != "" {
+				er := aescbc.Encryptor{
+					Key: env.GetString("AES_KEY", ""),
+					Iv:  env.GetString("AES_IV", ""),
+				}
+				if decryptTokenKey, err := er.Decrypt(base64TokenKey); err != nil {
+					return nil, err
+				} else {
+					tokenKeyBytes = []byte(decryptTokenKey)
+				}
 			} else {
-				check.cache.Set(cacheKey, decryptTokenKey, 24*time.Hour)
-				tokenKeyBytes = []byte(decryptTokenKey)
+				tokenKeyBytes, err = base64.StdEncoding.DecodeString(base64TokenKey)
+				if err != nil {
+					return nil, err
+				}
 			}
+			check.cache.Set(cacheKey, tokenKeyBytes, 24*time.Hour)
 		}
 	} else {
 		tokenKeyBytes = []byte(val.(string))

@@ -53,9 +53,11 @@ func Get(url, sgn, appId, timestamp string) ([]byte, error) {
 	if req, err := http.NewRequest("GET", url, nil); err != nil {
 		return nil, err
 	} else {
-		req.Header.Set("Authorization", "Signature "+sgn)
-		req.Header.Set("App-Id", appId)
-		req.Header.Set("Timestamp", timestamp)
+		if sgn != "" {
+			req.Header.Set("Authorization", "Signature "+sgn)
+			req.Header.Set("App-Id", appId)
+			req.Header.Set("Timestamp", timestamp)
+		}
 		if resp, err := cli.Do(req); err == nil {
 			defer func(Body io.ReadCloser) {
 				err := Body.Close()
