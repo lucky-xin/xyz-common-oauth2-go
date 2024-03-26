@@ -1,4 +1,4 @@
-package main
+package samples
 
 import (
 	"bytes"
@@ -90,17 +90,14 @@ func TestExtractToken(test *testing.T) {
 			Subject:   "xyz.com",
 		},
 	}
-	token, err := oauth2.GenToken([]byte(tk), claims)
+	token, err := oauth2.CreateToken([]byte(tk), claims)
 	if err != nil {
 		panic(err)
 	}
 	println(token)
-	checker, err := oauth2.NewChecker()
-	if err != nil {
-		panic(err)
-	}
+	checker := oauth2.NewDefaultChecker()
 	t := &oauth2.Token{Type: oauth2.OAUTH2, Value: token}
-	deClaims, err := checker.DecodeToken([]byte(tk), t)
+	deClaims, err := checker.Check([]byte(tk), t)
 	if err != nil {
 		panic(err)
 	}

@@ -12,8 +12,11 @@ type KeyInf struct {
 }
 
 type EncryptionInf struct {
-	TenantId  int32  `json:"tenantId" binding:"required"`
+	AppId     string `json:"appId" binding:"required"`
 	AppSecret string `json:"appSecret" binding:"required"`
+	AESKey    string `json:"aesKey" binding:"required"`
+	AESIv     string `json:"aesIv" binding:"required"`
+	TenantId  int32  `json:"tenantId" binding:"required"`
 	Username  string `json:"username" binding:"required"`
 	UserId    int64  `json:"userId" binding:"required"`
 }
@@ -40,6 +43,27 @@ var (
 
 type TokenResolver interface {
 	UriParamTokenName() string
-	TokenType() TokenType
 	Resolve(c *gin.Context) *Token
 }
+
+type Signature interface {
+	EncryptionInfSvc() (EncryptionInfSvc, error)
+	CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error)
+	Check(token *Token) (*XyzClaims, error)
+}
+
+type EncryptionInfSvc interface {
+	GetEncryptionInf(appId string) (*EncryptionInf, error)
+}
+
+type ConfigSignature struct {
+	ConfSvc EncryptionInfSvc
+}
+
+type Checker interface {
+	TokenResolver() TokenResolver
+	Check(key []byte, token *Token) (*XyzClaims, error)
+	CheckWithContext(key []byte, c *gin.Context) (*XyzClaims, error)
+}
+
+type TokenKey func() (byts []byte, err error)
