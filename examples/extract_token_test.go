@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"testing"
+	"time"
 )
 
 func getKeyBytes(key string) []byte {
@@ -74,12 +77,33 @@ func AESDecrypt(key, val []byte) ([]byte, error) {
 	return origData, nil
 }
 
-func TestExtractToken(t *testing.T) {
-	//token := "eyJraWQiOiJmY2Y2MDE4Ny0wOGE0LTQ4NGUtOTVmMS0wNzdhNDUzZWU3NjIiLCJhbGciOiJIUzUxMiJ9.eyJ0ZW5hbnRfaWQiOjEsInN1YiI6Imx1Y3giLCJhdWQiOiJwaXN0b25pbnRfY2xvdWQiLCJuYmYiOjE2OTM0NTc2NjIsInNjb3BlIjpbInJlYWQiXSwiaXNzIjoiaHR0cHM6Ly9kZXYtYXV0aC5zdmMucGlzdG9uaW50LmNvbSIsImlkIjozLCJleHAiOjE2OTM0NjEyNjIsImlhdCI6MTY5MzQ1NzY2MiwianRpIjoicGlzdG9uaW50IiwidXNlcm5hbWUiOiJsdWN4In0.c0hcqbt_kMHnniTQ6D4m5wj4KYi0YEyYpPJgSgpHuGLuGxpnlNMZY9SVJMt5ba9IBO09hskagPh4CQv9MPBxsw"
-	//details, err := oauth2.CheckToken(token)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//marshal, _ := json.Marshal(details)
-	//println(string(marshal))
+func TestExtractToken(test *testing.T) {
+	tk := "eyJraWQiOiJmY2Y2MDE4Ny0wOGE0LTQ4NGUtOTVmMS0wNzdhNDUzZWU3NjIiLCJhbGciOiJIUzUxMiJ9"
+	claims := &oauth2.XyzClaims{
+		Username: "chaoxin.lu",
+		UserId:   1,
+		TenantId: 1,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Subject:   "xyz.com",
+		},
+	}
+	token, err := oauth2.GenToken([]byte(tk), claims)
+	if err != nil {
+		panic(err)
+	}
+	println(token)
+	checker, err := oauth2.NewChecker()
+	if err != nil {
+		panic(err)
+	}
+	t := &oauth2.Token{Type: oauth2.OAUTH2, Value: token}
+	deClaims, err := checker.DecodeToken(t)
+	if err != nil {
+		panic(err)
+	}
+	println(deClaims.UserId)
+
 }

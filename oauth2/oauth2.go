@@ -179,7 +179,7 @@ func (check *Checker) checkOAuth2(token *Token) (u *XyzClaims, err error) {
 }
 
 // GenToken 生成jwt
-func GenToken(tk string, claims *XyzClaims) (t string, err error) {
+func GenToken(tk []byte, claims *XyzClaims) (t string, err error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	//使用指定的secret签名并获得完成的编码后的字符串token
 	return token.SignedString(tk)
