@@ -126,15 +126,15 @@ func (check *Checker) DecodeToken(key []byte, token *Token) (*XyzClaims, error) 
 	}
 	switch token.Type {
 	case OAUTH2:
-		return check.checkOAuth2(key, token)
+		return check.CheckOAuth2(key, token)
 	case SIGN:
-		return check.checkSign(token)
+		return check.CheckSign(token)
 	}
 
 	return nil, errors.New("unauthorized")
 }
 
-func (check *Checker) checkSign(token *Token) (*XyzClaims, error) {
+func (check *Checker) CheckSign(token *Token) (*XyzClaims, error) {
 	reqAppId := token.Params["App-Id"].(string)
 	reqTimestamp := token.Params["Timestamp"].(string)
 	if encryptionInf, err := GetEncryptionInf(reqAppId); err != nil {
@@ -163,7 +163,7 @@ func (check *Checker) checkSign(token *Token) (*XyzClaims, error) {
 	return nil, nil
 }
 
-func (check *Checker) checkOAuth2(key []byte, token *Token) (u *XyzClaims, err error) {
+func (check *Checker) CheckOAuth2(key []byte, token *Token) (u *XyzClaims, err error) {
 	if err != nil {
 		return
 	}
