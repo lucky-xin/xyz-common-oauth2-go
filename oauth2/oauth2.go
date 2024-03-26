@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
 	aescbc "github.com/lucky-xin/xyz-common-go/security/aes.cbc"
@@ -53,7 +53,7 @@ func (check *Checker) GetTokenKey() (byts []byte, err error) {
 			return
 		}
 
-		oauth2TokenKeyUrl := env.GetString("OAUTH2_ENDPOINT", "") + "/oauth2/octet-key"
+		oauth2TokenKeyUrl := env.GetString("OAUTH2_TOKEN_KEY_URL", "https://127.0.0.1:6666/oauth2/octet-key")
 		appId := env.GetString("APP_ID", "")
 		appSecret := env.GetString("APP_SECRET", "")
 		var timestamp, sgn string
@@ -108,7 +108,7 @@ func (check *Checker) Authorize() gin.HandlerFunc {
 	}
 }
 
-func (check *Checker) Check(c *gin.Context) (*PistonClaims, error) {
+func (check *Checker) Check(c *gin.Context) (*XyzClaims, error) {
 	token := check.tokenResolver.Resolve(c)
 	if token == nil {
 		return nil, errors.New("unauthorized")
@@ -116,7 +116,7 @@ func (check *Checker) Check(c *gin.Context) (*PistonClaims, error) {
 	return check.DecodeToken(token)
 }
 
-func (check *Checker) DecodeToken(token *Token) (*PistonClaims, error) {
+func (check *Checker) DecodeToken(token *Token) (*XyzClaims, error) {
 	if token == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -130,7 +130,7 @@ func (check *Checker) DecodeToken(token *Token) (*PistonClaims, error) {
 	return nil, errors.New("unauthorized")
 }
 
-func (check *Checker) checkSign(token *Token) (*PistonClaims, error) {
+func (check *Checker) checkSign(token *Token) (*XyzClaims, error) {
 	reqAppId := token.Params["App-Id"].(string)
 	reqTimestamp := token.Params["Timestamp"].(string)
 	if encryptionInf, err := GetEncryptionInf(reqAppId); err != nil {
@@ -143,14 +143,14 @@ func (check *Checker) checkSign(token *Token) (*PistonClaims, error) {
 			if strings.Compare(sgn, token.Value) != 0 {
 				return nil, errors.New("invalid signature")
 			}
-			now := jwt.TimeFunc().Unix()
-			return &PistonClaims{
+			return &XyzClaims{
 				Username: username,
 				UserId:   userId,
 				TenantId: encryptionInf.TenantId,
-				StandardClaims: jwt.StandardClaims{
-					IssuedAt:  now,
-					ExpiresAt: now + 30,
+				RegisteredClaims: jwt.RegisteredClaims{
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+					IssuedAt:  jwt.NewNumericDate(time.Now()),
+					NotBefore: jwt.NewNumericDate(time.Now()),
 					Subject:   username,
 				},
 			}, nil
@@ -159,13 +159,16 @@ func (check *Checker) checkSign(token *Token) (*PistonClaims, error) {
 	return nil, nil
 }
 
-func (check *Checker) checkOAuth2(token *Token) (u *PistonClaims, err error) {
+func (check *Checker) checkOAuth2(token *Token) (u *XyzClaims, err error) {
 	key, err := check.GetTokenKey()
 	if err != nil {
 		return
 	}
-	claims := &PistonClaims{}
-	parser := jwt.Parser{ValidMethods: []string{"HS512"}, UseJSONNumber: false, SkipClaimsValidation: false}
+	claims := &XyzClaims{}
+	parser := jwt.NewParser(
+		jwt.WithValidMethods([]string{"HS512"}),
+		jwt.WithoutClaimsValidation(),
+	)
 	if _, err := parser.ParseWithClaims(token.Value, claims, func(token *jwt.Token) (interface{}, error) {
 		return key, nil
 	}); err == nil {
@@ -173,4 +176,11 @@ func (check *Checker) checkOAuth2(token *Token) (u *PistonClaims, err error) {
 	} else {
 		return nil, err
 	}
+}
+
+// GenToken 生成jwt
+func GenToken(tk string, claims *XyzClaims) (t string, err error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	//使用指定的secret签名并获得完成的编码后的字符串token
+	return token.SignedString(tk)
 }

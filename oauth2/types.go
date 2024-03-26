@@ -2,7 +2,7 @@ package oauth2
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type KeyInf struct {
@@ -18,8 +18,8 @@ type EncryptionInf struct {
 	UserId    int64  `json:"userId" binding:"required"`
 }
 
-type PistonClaims struct {
-	jwt.StandardClaims
+type XyzClaims struct {
+	jwt.RegisteredClaims
 	Username string `json:"username" binding:"required"`
 	TenantId int32  `json:"tenant_id" binding:"required"`
 	UserId   int64  `json:"id" binding:"required"`
