@@ -37,20 +37,20 @@ func NewWithTokenResolver(tokenResolver TokenResolver) *Checker {
 	}
 }
 
-func (check *Checker) GetTokenKey() ([]byte, error) {
+func (check *Checker) GetTokenKey() (byts []byte, err error) {
 	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
 	if tk != "" {
-		return []byte(tk), nil
+		byts = []byte(tk)
+		return
 	}
 
 	cacheKey := "token_key"
-	var tokenKeyBytes []byte
-	if val, ex := check.cache.Get(cacheKey); !ex {
+	if tokenKey, exist := check.cache.Get(cacheKey); !exist {
 		check.mu.Lock()
 		defer check.mu.Unlock()
-		if val, ex := check.cache.Get(cacheKey); ex {
-			tokenKeyBytes = val.([]byte)
-			return tokenKeyBytes, nil
+		if tokenKey, exist = check.cache.Get(cacheKey); exist {
+			byts = tokenKey.([]byte)
+			return
 		}
 
 		oauth2TokenKeyUrl := env.GetString("OAUTH2_ENDPOINT", "") + "/oauth2/octet-key"
@@ -60,38 +60,37 @@ func (check *Checker) GetTokenKey() ([]byte, error) {
 		if appId != "" && appSecret != "" {
 			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
 		}
-		if respBytes, err := Get(oauth2TokenKeyUrl, sgn, appId, timestamp); err != nil {
-			return nil, err
-		} else {
-			var keyInf = &r.Resp[KeyInf]{}
-			err = json.Unmarshal(respBytes, keyInf)
-			data := keyInf.BizData
-			base64TokenKey := data.Key
-
-			aesKey := env.GetString("AES_KEY", "")
-			aesIv := env.GetString("AES_KEY", "")
-			if aesKey != "" && aesIv != "" {
-				er := aescbc.Encryptor{
-					Key: env.GetString("AES_KEY", ""),
-					Iv:  env.GetString("AES_IV", ""),
-				}
-				if decryptTokenKey, err := er.Decrypt(base64TokenKey); err != nil {
-					return nil, err
-				} else {
-					tokenKeyBytes = []byte(decryptTokenKey)
-				}
-			} else {
-				tokenKeyBytes, err = base64.StdEncoding.DecodeString(base64TokenKey)
-				if err != nil {
-					return nil, err
-				}
-			}
-			check.cache.Set(cacheKey, tokenKeyBytes, 24*time.Hour)
+		var respBytes []byte
+		respBytes, err = Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
+		if err != nil {
+			return
 		}
+
+		var keyInf = &r.Resp[KeyInf]{}
+		err = json.Unmarshal(respBytes, keyInf)
+		if err != nil {
+			return
+		}
+		base64TokenKey := keyInf.BizData.Key
+		aesKey := env.GetString("AES_KEY", "")
+		aesIv := env.GetString("AES_IV", "")
+		if aesKey != "" && aesIv != "" {
+			encryptor := aescbc.Encryptor{Key: aesKey, Iv: aesIv}
+			byts, err = encryptor.Decrypt(base64TokenKey)
+			if err != nil {
+				return
+			}
+		} else {
+			byts, err = base64.StdEncoding.DecodeString(base64TokenKey)
+			if err != nil {
+				return
+			}
+		}
+		check.cache.Set(cacheKey, byts, 24*time.Hour)
 	} else {
-		tokenKeyBytes = []byte(val.(string))
+		byts = tokenKey.([]byte)
 	}
-	return tokenKeyBytes, nil
+	return
 }
 
 func (check *Checker) Authorize() gin.HandlerFunc {
