@@ -1,22 +1,23 @@
-package oauth2
+package resolver
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/lucky-xin/xyz-common-go/env"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/types"
 	"log"
 	"strings"
 )
 
 type DefaultTokenResolver struct {
 	paramTokenName string
-	tokenTypes     []TokenType
+	tokenTypes     []types.TokenType
 }
 
 func (d DefaultTokenResolver) UriParamTokenName() string {
 	return d.paramTokenName
 }
 
-func (d DefaultTokenResolver) Resolve(c *gin.Context) *Token {
+func (d DefaultTokenResolver) Resolve(c *gin.Context) *types.Token {
 	authorization := c.GetHeader("Authorization")
 	if authorization != "" {
 		log.Print("access token from header")
@@ -30,12 +31,12 @@ func (d DefaultTokenResolver) Resolve(c *gin.Context) *Token {
 	return nil
 }
 
-func (d DefaultTokenResolver) Parse(authorization string, c *gin.Context) *Token {
+func (d DefaultTokenResolver) Parse(authorization string, c *gin.Context) *types.Token {
 	split := strings.Split(authorization, " ")
 	if len(split) == 2 {
-		tt := TokenType(strings.TrimSpace(split[0]))
-		t := &Token{Type: tt, Value: strings.TrimSpace(split[1])}
-		if tt == SIGN {
+		tt := types.TokenType(strings.TrimSpace(split[0]))
+		t := &types.Token{Type: tt, Value: strings.TrimSpace(split[1])}
+		if tt == types.SIGN {
 			appId := c.GetHeader("App-Id")
 			timestamp := c.GetHeader("Timestamp")
 			t.Params = map[string]interface{}{
@@ -45,22 +46,22 @@ func (d DefaultTokenResolver) Parse(authorization string, c *gin.Context) *Token
 		}
 		return t
 	}
-	return &Token{Type: OAUTH2, Value: strings.TrimSpace(split[0])}
+	return &types.Token{Type: types.OAUTH2, Value: strings.TrimSpace(split[0])}
 }
 
-func NewDefaultTokenResolver(paramTokenName string, tokenTypes []TokenType) TokenResolver {
+func NewDefaultTokenResolver(paramTokenName string, tokenTypes []types.TokenType) types.TokenResolver {
 	return &DefaultTokenResolver{
 		paramTokenName: paramTokenName,
 		tokenTypes:     tokenTypes,
 	}
 }
 
-func NewDefaultTokenResolverWithEnv() TokenResolver {
+func NewDefaultTokenResolverWithEnv() types.TokenResolver {
 	array := env.GetStringArray("OAUTH2_TOKEN_TYPE", []string{"OAUTH2", "SIGN"})
-	var tokenTypes []TokenType
+	var tokenTypes []types.TokenType
 	for i := range array {
 		item := array[i]
-		tokenTypes = append(tokenTypes, TokenType(item))
+		tokenTypes = append(tokenTypes, types.TokenType(item))
 	}
 	return &DefaultTokenResolver{
 		paramTokenName: env.GetString("OAUTH2_URI_PARAM_TOKEN_NAME", "authz"),

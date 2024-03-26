@@ -1,4 +1,4 @@
-package oauth2
+package utils
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	cli = &http.Client{
+	HttpClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
@@ -26,7 +26,7 @@ func Get(url, sgn, appId, timestamp string) ([]byte, error) {
 			req.Header.Set("App-Id", appId)
 			req.Header.Set("Timestamp", timestamp)
 		}
-		if resp, err := cli.Do(req); err == nil {
+		if resp, err := HttpClient.Do(req); err == nil {
 			defer func(Body io.ReadCloser) {
 				err := Body.Close()
 				if err != nil {

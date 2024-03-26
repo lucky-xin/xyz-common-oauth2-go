@@ -1,4 +1,4 @@
-package oauth2
+package sign
 
 import (
 	"bytes"
@@ -12,12 +12,18 @@ import (
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
 	"github.com/lucky-xin/xyz-common-go/sign"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/types"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/patrickmn/go-cache"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 )
+
+type ConfigSignature struct {
+	ConfSvc types.EncryptionInfSvc
+}
 
 type RestEncryptionInfSvc struct {
 	EncryptionConfUrl string
@@ -30,33 +36,62 @@ type RestEncryptionInfSvc struct {
 	mua sync.RWMutex
 }
 
-func NewRestConfigSignatureWithEnv() Signature {
+func NewRestConfigSignatureWithEnv() types.Signature {
 	return NewRestConfigSignature(
 		env.GetString("OAUTH2_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf/app-id"),
 	)
 }
 
-func NewRestEncryptionInfSvc(encryptionConfUrl string) EncryptionInfSvc {
+func NewRestEncryptionInfSvc(encryptionConfUrl string) types.EncryptionInfSvc {
 	return &RestEncryptionInfSvc{
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(12*time.Hour, 6*time.Hour),
 	}
 }
 
-func NewRestConfigSignature(encryptionConfUrl string) Signature {
+func NewRestConfigSignature(encryptionConfUrl string) types.Signature {
 	return &ConfigSignature{ConfSvc: NewRestEncryptionInfSvc(encryptionConfUrl)}
 }
 
-func NewSignature(confSvc EncryptionInfSvc) Signature {
+func NewSignature(confSvc types.EncryptionInfSvc) types.Signature {
 	return &ConfigSignature{ConfSvc: confSvc}
 }
 
-func (restSign *ConfigSignature) EncryptionInfSvc() (EncryptionInfSvc, error) {
+func (restSign *ConfigSignature) EncryptionInfSvc() (types.EncryptionInfSvc, error) {
 	return restSign.ConfSvc, nil
 }
 
 func (restSign *ConfigSignature) CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
 	return CreateSign(params, appSecret, timestamp)
+}
+
+func (restSign *ConfigSignature) Check(token *types.Token) (*types.XyzClaims, error) {
+	reqAppId := token.Params["App-Id"].(string)
+	reqTimestamp := token.Params["Timestamp"].(string)
+	if conf, err := restSign.ConfSvc.GetEncryptionInf(reqAppId); err != nil {
+		appSecret := conf.AppSecret
+		username := conf.Username
+		userId := conf.UserId
+		if sgn, err := restSign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
+			return nil, err
+		} else {
+			if strings.Compare(sgn, token.Value) != 0 {
+				return nil, errors.New("invalid signature")
+			}
+			return &types.XyzClaims{
+				Username: username,
+				UserId:   userId,
+				TenantId: conf.TenantId,
+				RegisteredClaims: jwt.RegisteredClaims{
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+					IssuedAt:  jwt.NewNumericDate(time.Now()),
+					NotBefore: jwt.NewNumericDate(time.Now()),
+					Subject:   username,
+				},
+			}, nil
+		}
+	}
+	return nil, nil
 }
 
 func CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
@@ -79,46 +114,17 @@ func CreateSign(params map[string]interface{}, appSecret, timestamp string) (str
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-func (restSign *ConfigSignature) Check(token *Token) (*XyzClaims, error) {
-	reqAppId := token.Params["App-Id"].(string)
-	reqTimestamp := token.Params["Timestamp"].(string)
-	if conf, err := restSign.ConfSvc.GetEncryptionInf(reqAppId); err != nil {
-		appSecret := conf.AppSecret
-		username := conf.Username
-		userId := conf.UserId
-		if sgn, err := restSign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
-			return nil, err
-		} else {
-			if strings.Compare(sgn, token.Value) != 0 {
-				return nil, errors.New("invalid signature")
-			}
-			return &XyzClaims{
-				Username: username,
-				UserId:   userId,
-				TenantId: conf.TenantId,
-				RegisteredClaims: jwt.RegisteredClaims{
-					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-					IssuedAt:  jwt.NewNumericDate(time.Now()),
-					NotBefore: jwt.NewNumericDate(time.Now()),
-					Subject:   username,
-				},
-			}, nil
-		}
-	}
-	return nil, nil
-}
-
-func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*EncryptionInf, error) {
+func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*types.EncryptionInf, error) {
 	key := "app_id:" + appId
 	if val, b := svc.c.Get(key); b {
-		s := val.(EncryptionInf)
+		s := val.(types.EncryptionInf)
 		return &s, nil
 	}
 
 	svc.mua.Lock()
 	defer svc.mua.Unlock()
 	if val, b := svc.c.Get(key); b {
-		s := val.(EncryptionInf)
+		s := val.(types.EncryptionInf)
 		return &s, nil
 	}
 	var url string
@@ -129,10 +135,10 @@ func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*EncryptionInf,
 	}
 
 	timestamp, sgn := sign.SignWithTimestamp(svc.appSecret, "")
-	if respBytes, err := Get(url, sgn, appId, timestamp); err != nil {
+	if respBytes, err := utils.Get(url, sgn, appId, timestamp); err != nil {
 		return nil, err
 	} else {
-		var resp = &r.Resp[EncryptionInf]{}
+		var resp = &r.Resp[types.EncryptionInf]{}
 		err = json.Unmarshal(respBytes, resp)
 		data := resp.BizData
 		svc.c.Set(key, data, 24*time.Hour)

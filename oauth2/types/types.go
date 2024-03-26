@@ -1,4 +1,4 @@
-package oauth2
+package types
 
 import (
 	"github.com/gin-gonic/gin"
@@ -54,10 +54,6 @@ type Signature interface {
 
 type EncryptionInfSvc interface {
 	GetEncryptionInf(appId string) (*EncryptionInf, error)
-}
-
-type ConfigSignature struct {
-	ConfSvc EncryptionInfSvc
 }
 
 type Checker interface {
