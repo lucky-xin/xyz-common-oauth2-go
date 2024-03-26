@@ -113,16 +113,20 @@ func (check *Checker) Check(c *gin.Context) (*XyzClaims, error) {
 	if token == nil {
 		return nil, errors.New("unauthorized")
 	}
-	return check.DecodeToken(token)
+	key, err := check.GetTokenKey()
+	if err != nil {
+		return nil, err
+	}
+	return check.DecodeToken(key, token)
 }
 
-func (check *Checker) DecodeToken(token *Token) (*XyzClaims, error) {
+func (check *Checker) DecodeToken(key []byte, token *Token) (*XyzClaims, error) {
 	if token == nil {
 		return nil, errors.New("unauthorized")
 	}
 	switch token.Type {
 	case OAUTH2:
-		return check.checkOAuth2(token)
+		return check.checkOAuth2(key, token)
 	case SIGN:
 		return check.checkSign(token)
 	}
@@ -159,8 +163,7 @@ func (check *Checker) checkSign(token *Token) (*XyzClaims, error) {
 	return nil, nil
 }
 
-func (check *Checker) checkOAuth2(token *Token) (u *XyzClaims, err error) {
-	key, err := check.GetTokenKey()
+func (check *Checker) checkOAuth2(key []byte, token *Token) (u *XyzClaims, err error) {
 	if err != nil {
 		return
 	}

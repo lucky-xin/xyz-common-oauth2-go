@@ -100,10 +100,9 @@ func TestExtractToken(test *testing.T) {
 		panic(err)
 	}
 	t := &oauth2.Token{Type: oauth2.OAUTH2, Value: token}
-	deClaims, err := checker.DecodeToken(t)
+	deClaims, err := checker.DecodeToken([]byte(tk), t)
 	if err != nil {
 		panic(err)
 	}
 	println(deClaims.UserId)
-
 }
