@@ -42,7 +42,14 @@ func (d DefaultTokenResolver) Resolve(c *gin.Context) *Token {
 	return nil
 }
 
-func NewDefaultTokenResolver() TokenResolver {
+func NewDefaultTokenResolver(paramTokenName string, tt TokenType) TokenResolver {
+	return &DefaultTokenResolver{
+		paramTokenName: paramTokenName,
+		tokenType:      tt,
+	}
+}
+
+func NewDefaultTokenResolverWithEnv() TokenResolver {
 	return &DefaultTokenResolver{
 		paramTokenName: env.GetString("OAUTH2_URI_PARAM_TOKEN_NAME", "authz"),
 		tokenType:      TokenType(env.GetString("OAUTH2_TOKEN_TYPE", "OAuth2")),
