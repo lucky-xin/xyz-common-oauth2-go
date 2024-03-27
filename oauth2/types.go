@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-go/env"
-	"github.com/lucky-xin/xyz-common-go/r"
 	aescbc "github.com/lucky-xin/xyz-common-go/security/aes.cbc"
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
 	"sync"
 	"time"
@@ -83,12 +83,18 @@ func RestTokenKey() (byts []byte, err error) {
 			return
 		}
 
-		var keyInf = &r.Resp[KeyInf]{}
-		err = json.Unmarshal(respBytes, keyInf)
+		var resp = map[string]interface{}{}
+		err = json.Unmarshal(respBytes, &resp)
 		if err != nil {
 			return
 		}
-		base64TokenKey := keyInf.BizData.Key
+		keyJsonPath := env.GetString("OAUTH2_KEY_JSON_PATH", "$.data.key")
+		var key interface{}
+		key, err = jsonpath.JsonPathLookup(resp, keyJsonPath)
+		if err != nil {
+			return
+		}
+		base64TokenKey := key.(string)
 		aesKey := env.GetString("AES_KEY", "")
 		aesIv := env.GetString("AES_IV", "")
 		if aesKey != "" && aesIv != "" {

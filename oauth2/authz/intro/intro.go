@@ -10,6 +10,7 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/oliveagle/jsonpath"
 	"io"
 	"net/http"
 	"time"
@@ -19,16 +20,16 @@ type Checker struct {
 	checkTokenUrl string
 	clientId      string
 	clientSecret  string
-	claimKey      string
+	claimJp       string
 	resolver      resolver.TokenResolver
 }
 
-func Create(checkTokenUrl, clientId, clientSecret, claimKey string, resolver resolver.TokenResolver) *Checker {
+func Create(checkTokenUrl, clientId, clientSecret, claimJp string, resolver resolver.TokenResolver) *Checker {
 	return &Checker{
 		checkTokenUrl: checkTokenUrl,
 		clientId:      clientId,
 		clientSecret:  clientSecret,
-		claimKey:      claimKey,
+		claimJp:       claimJp,
 		resolver:      resolver,
 	}
 }
@@ -38,7 +39,7 @@ func CreateWithEnv() *Checker {
 		checkTokenUrl: env.GetString("OAUTH2_CHECK_TOKEN_URL", ""),
 		clientId:      env.GetString("OAUTH2_CLIENT_ID", ""),
 		clientSecret:  env.GetString("OAUTH2_CLIENT_SECRET", ""),
-		claimKey:      env.GetString("OAUTH2_RESP_CLAIMS_KEY", ""),
+		claimJp:       env.GetString("OAUTH2_RESP_CLAIMS_JSON_PATH", ""),
 		resolver:      resolver.CreateWithEnv(),
 	}
 }
@@ -73,8 +74,13 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzCla
 				return nil, err
 			}
 			origClaims := res
-			if checker.claimKey != "" {
-				origClaims = res[checker.claimKey].(map[string]interface{})
+			if checker.claimJp != "" {
+				var tmp interface{}
+				tmp, err = jsonpath.JsonPathLookup(resp, checker.claimJp)
+				if err != nil {
+					return nil, err
+				}
+				origClaims = tmp.(map[string]interface{})
 			}
 			u = &oauth2.XyzClaims{
 				RegisteredClaims: jwt.RegisteredClaims{},
