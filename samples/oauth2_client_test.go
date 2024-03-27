@@ -11,10 +11,13 @@ import (
 	xjwt "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/jwt"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/signature"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/wrapper"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/key"
 	resolver2 "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	"io"
 	"net/http"
 	"testing"
+	"time"
 )
 
 func TestOAUth2CliTest(tet *testing.T) {
@@ -107,12 +110,18 @@ func TestOAUth2CliTest(tet *testing.T) {
 	t := &oauth2.Token{Type: oauth2.OAUTH2, Value: tokenResp.Data().AccessToken}
 
 	resolver := resolver2.Create("oauthz", []oauth2.TokenType{oauth2.OAUTH2})
+	restTokenKey := key.Create(rest.CreateWithEnv(), 6*time.Hour)
 	checker, err := wrapper.Create(
 		resolver,
-		oauth2.RestTokenKey,
+		restTokenKey,
 		map[oauth2.TokenType]authz.Checker{
 			oauth2.OAUTH2: xjwt.Create([]string{"HS512"}, resolver),
-			oauth2.SIGN:   signature.CreateWithRest("http://127.0.0.1:6666/oauth2/encryption-conf/app-id", resolver),
+			oauth2.SIGN: signature.CreateWithRest(
+				"http://127.0.0.1:6666/oauth2/encryption-conf/app-id",
+				time.Hour*6,
+				time.Hour*6,
+				resolver,
+			),
 		},
 	)
 	if err != nil {

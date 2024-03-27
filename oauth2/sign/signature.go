@@ -5,70 +5,48 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/lucky-xin/xyz-common-go/env"
-	"github.com/lucky-xin/xyz-common-go/r"
-	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
-	"github.com/patrickmn/go-cache"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
-type ConfigSignature struct {
-	ConfSvc authz.EncryptionInfSvc
+type Signature struct {
+	ConfSvc conf.EncryptInfSvc
 }
 
-type RestEncryptionInfSvc struct {
-	EncryptionConfUrl string
-	c                 *cache.Cache
-	// 当前应用appId
-	appId string
-	// 当前应用appSecret
-	appSecret string
-
-	mua sync.RWMutex
+func CreateWithRest(encryptionConfUrl string, expireMs, cleanupMs time.Duration) authz.Signature {
+	return &Signature{ConfSvc: rest.Create(encryptionConfUrl, expireMs, cleanupMs)}
 }
-
 func CreateWithEnv() authz.Signature {
-	return CreateWithRest(
-		env.GetString("OAUTH2_SIGN_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf"),
-	)
+	return Create(rest.CreateWithEnv())
 }
 
-func CreateWithRest(encryptionConfUrl string) authz.Signature {
-	return &ConfigSignature{ConfSvc: &RestEncryptionInfSvc{
-		EncryptionConfUrl: encryptionConfUrl,
-		c:                 cache.New(12*time.Hour, 6*time.Hour),
-	}}
+func Create(confSvc conf.EncryptInfSvc) authz.Signature {
+	return &Signature{ConfSvc: confSvc}
 }
 
-func Create(confSvc authz.EncryptionInfSvc) authz.Signature {
-	return &ConfigSignature{ConfSvc: confSvc}
-}
-
-func (restSign *ConfigSignature) EncryptionInfSvc() (authz.EncryptionInfSvc, error) {
+func (restSign *Signature) EncryptionInfSvc() (conf.EncryptInfSvc, error) {
 	return restSign.ConfSvc, nil
 }
 
-func (restSign *ConfigSignature) CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
+func (restSign *Signature) CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
 	return CreateSign(params, appSecret, timestamp)
 }
 
-func (restSign *ConfigSignature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
+func (restSign *Signature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
 	reqAppId := token.Params["App-Id"].(string)
 	reqTimestamp := token.Params["Timestamp"].(string)
-	if conf, err := restSign.ConfSvc.GetEncryptionInf(reqAppId); err != nil {
-		appSecret := conf.AppSecret
-		username := conf.Username
-		userId := conf.UserId
+	if inf, err := restSign.ConfSvc.GetEncryptInf(reqAppId); err != nil {
+		appSecret := inf.AppSecret
+		username := inf.Username
+		userId := inf.UserId
 		if sgn, err := restSign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
 			return nil, err
 		} else {
@@ -78,7 +56,7 @@ func (restSign *ConfigSignature) Check(token *oauth2.Token) (*oauth2.XyzClaims, 
 			return &oauth2.XyzClaims{
 				Username: username,
 				UserId:   userId,
-				TenantId: conf.TenantId,
+				TenantId: inf.TenantId,
 				RegisteredClaims: jwt.RegisteredClaims{
 					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
 					IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -109,36 +87,4 @@ func CreateSign(params map[string]interface{}, appSecret, timestamp string) (str
 	mac := hmac.New(sha256.New, []byte(appSecret))
 	mac.Write(stringToSign) // nolint: errcheck
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
-}
-
-func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*oauth2.EncryptionInf, error) {
-	key := "app_id:" + appId
-	if val, b := svc.c.Get(key); b {
-		s := val.(oauth2.EncryptionInf)
-		return &s, nil
-	}
-
-	svc.mua.Lock()
-	defer svc.mua.Unlock()
-	if val, b := svc.c.Get(key); b {
-		s := val.(oauth2.EncryptionInf)
-		return &s, nil
-	}
-	var url string
-	if svc.EncryptionConfUrl[len(svc.EncryptionConfUrl)-1] == '/' {
-		url = svc.EncryptionConfUrl + appId
-	} else {
-		url = svc.EncryptionConfUrl + "/" + appId
-	}
-
-	timestamp, sgn := sign.SignWithTimestamp(svc.appSecret, "")
-	if respBytes, err := utils.Get(url, sgn, appId, timestamp); err != nil {
-		return nil, err
-	} else {
-		var resp = &r.Resp[oauth2.EncryptionInf]{}
-		err = json.Unmarshal(respBytes, resp)
-		data := resp.BizData
-		svc.c.Set(key, data, 24*time.Hour)
-		return &data, err
-	}
 }

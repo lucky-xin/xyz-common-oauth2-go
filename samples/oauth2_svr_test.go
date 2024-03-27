@@ -13,6 +13,8 @@ import (
 	xjwt "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/jwt"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/signature"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/wrapper"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/key"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	"io"
 	"log"
@@ -25,7 +27,7 @@ type InMemoryEncryptionInfSvc struct {
 	confs map[string]*oauth2.EncryptionInf
 }
 
-func (svc *InMemoryEncryptionInfSvc) GetEncryptionInf(appId string) (*oauth2.EncryptionInf, error) {
+func (svc *InMemoryEncryptionInfSvc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 	inf := svc.confs[appId]
 	if inf == nil {
 		return nil, errors.New("not found config,app id:" + appId)
@@ -57,12 +59,19 @@ func TestOAUth2SvrTest(t *testing.T) {
 	gin.SetMode(env.GetString("GIN_MODE", gin.DebugMode))
 	engine := gin.New()
 	tokenResolver := resolver.Create("authz", []oauth2.TokenType{oauth2.SIGN})
+	restTokenKey := key.Create(rest.CreateWithEnv(), 6*time.Hour)
+
 	checker, err := wrapper.Create(
 		tokenResolver,
-		oauth2.RestTokenKey,
+		restTokenKey,
 		map[oauth2.TokenType]authz.Checker{
 			oauth2.OAUTH2: xjwt.Create([]string{"HS512"}, tokenResolver),
-			oauth2.SIGN:   signature.CreateWithRest("http://127.0.0.1:6666/oauth2/encryption-conf/app-id", tokenResolver),
+			oauth2.SIGN: signature.CreateWithRest(
+				"http://127.0.0.1:6666/oauth2/encryption-conf/app-id",
+				time.Hour*6,
+				time.Hour*6,
+				tokenResolver,
+			),
 		},
 	)
 	if err != nil {
@@ -90,7 +99,7 @@ func TestOAUth2SvrTest(t *testing.T) {
 	}).GET("/oauth2/encryption-conf/app-id/:appId", func(c *gin.Context) {
 		appId := c.Param("appId")
 		// 查询DB获取配置信息
-		conf, err := confSvc.GetEncryptionInf(appId)
+		conf, err := confSvc.GetEncryptInf(appId)
 		if err != nil {
 			c.JSON(http.StatusOK, r.Failed(err.Error()))
 			return

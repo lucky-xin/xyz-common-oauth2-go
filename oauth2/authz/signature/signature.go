@@ -6,6 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	osign "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
 	"strings"
@@ -24,15 +25,16 @@ func CreateWithEnv() *Checker {
 	}
 }
 
-func CreateWithRest(encryptionConfUrl string, resolver resolver.TokenResolver) *Checker {
-	signature := osign.CreateWithRest(encryptionConfUrl)
+func CreateWithRest(encryptionConfUrl string, expireMs, cleanupMs time.Duration,
+	resolver resolver.TokenResolver) *Checker {
+	signature := osign.CreateWithRest(encryptionConfUrl, expireMs, cleanupMs)
 	return &Checker{
 		sign:     signature,
 		resolver: resolver,
 	}
 }
 
-func Create(confSvc authz.EncryptionInfSvc, resolver resolver.TokenResolver) *Checker {
+func Create(confSvc conf.EncryptInfSvc, resolver resolver.TokenResolver) *Checker {
 	signature := osign.Create(confSvc)
 	return &Checker{
 		sign:     signature,
@@ -51,10 +53,10 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaim
 	if err != nil {
 		return nil, err
 	}
-	if conf, err := confSvc.GetEncryptionInf(reqAppId); err != nil {
-		appSecret := conf.AppSecret
-		username := conf.Username
-		userId := conf.UserId
+	if inf, err := confSvc.GetEncryptInf(reqAppId); err != nil {
+		appSecret := inf.AppSecret
+		username := inf.Username
+		userId := inf.UserId
 		if sgn, err := checker.sign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
 			return nil, err
 		} else {
@@ -64,7 +66,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaim
 			return &oauth2.XyzClaims{
 				Username: username,
 				UserId:   userId,
-				TenantId: conf.TenantId,
+				TenantId: inf.TenantId,
 				RegisteredClaims: jwt.RegisteredClaims{
 					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
 					IssuedAt:  jwt.NewNumericDate(time.Now()),

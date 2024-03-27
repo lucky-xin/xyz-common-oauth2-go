@@ -3,6 +3,7 @@ package authz
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 )
 
@@ -13,13 +14,11 @@ type Checker interface {
 }
 
 type Signature interface {
-	EncryptionInfSvc() (EncryptionInfSvc, error)
+	EncryptionInfSvc() (conf.EncryptInfSvc, error)
 	CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error)
 	Check(token *oauth2.Token) (*oauth2.XyzClaims, error)
 }
 
-type EncryptionInfSvc interface {
-	GetEncryptionInf(appId string) (*oauth2.EncryptionInf, error)
+type TokenKey interface {
+	Get() (byts []byte, err error)
 }
-
-type TokenKey func() (byts []byte, err error)
