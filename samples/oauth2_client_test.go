@@ -109,7 +109,7 @@ func TestOAUth2CliTest(tet *testing.T) {
 	resolver := resolver2.Create("oauthz", []oauth2.TokenType{oauth2.OAUTH2})
 	checker, err := wrapper.Create(
 		resolver,
-		wrapper.RestTokenKey,
+		oauth2.RestTokenKey,
 		map[oauth2.TokenType]authz.Checker{
 			oauth2.OAUTH2: xjwt.Create([]string{"HS512"}, resolver),
 			oauth2.SIGN:   signature.CreateWithRest("http://127.0.0.1:6666/oauth2/encryption-conf/app-id", resolver),

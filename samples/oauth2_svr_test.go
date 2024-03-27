@@ -59,7 +59,7 @@ func TestOAUth2SvrTest(t *testing.T) {
 	tokenResolver := resolver.Create("authz", []oauth2.TokenType{oauth2.SIGN})
 	checker, err := wrapper.Create(
 		tokenResolver,
-		wrapper.RestTokenKey,
+		oauth2.RestTokenKey,
 		map[oauth2.TokenType]authz.Checker{
 			oauth2.OAUTH2: xjwt.Create([]string{"HS512"}, tokenResolver),
 			oauth2.SIGN:   signature.CreateWithRest("http://127.0.0.1:6666/oauth2/encryption-conf/app-id", tokenResolver),
