@@ -124,4 +124,6 @@ func TestOAUth2CliTest(tet *testing.T) {
 	}
 	println(deClaims.UserId)
 	println(deClaims.Username)
+	auth := oauth2.CreateBasicAuth("piston", "lskcjakjck")
+	println(auth)
 }

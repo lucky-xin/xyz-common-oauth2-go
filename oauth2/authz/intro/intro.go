@@ -48,7 +48,7 @@ func (checker *Checker) TokenResolver() resolver.TokenResolver {
 }
 
 func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzClaims, err error) {
-	auth := utils.ToBasicAuth(checker.clientId, checker.clientSecret)
+	auth := oauth2.CreateBasicAuth(checker.clientId, checker.clientSecret)
 	if req, err := http.NewRequest("GET", checker.checkTokenUrl+"?token="+token.Value, nil); err != nil {
 		return nil, err
 	} else {
