@@ -12,7 +12,8 @@ import (
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
 	"github.com/lucky-xin/xyz-common-go/sign"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/types"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/patrickmn/go-cache"
 	"sort"
@@ -22,7 +23,7 @@ import (
 )
 
 type ConfigSignature struct {
-	ConfSvc types.EncryptionInfSvc
+	ConfSvc authz.EncryptionInfSvc
 }
 
 type RestEncryptionInfSvc struct {
@@ -36,28 +37,24 @@ type RestEncryptionInfSvc struct {
 	mua sync.RWMutex
 }
 
-func NewRestConfigSignatureWithEnv() types.Signature {
-	return NewRestConfigSignature(
+func CreateWithEnv() authz.Signature {
+	return CreateWithRest(
 		env.GetString("OAUTH2_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf/app-id"),
 	)
 }
 
-func NewRestEncryptionInfSvc(encryptionConfUrl string) types.EncryptionInfSvc {
-	return &RestEncryptionInfSvc{
+func CreateWithRest(encryptionConfUrl string) authz.Signature {
+	return &ConfigSignature{ConfSvc: &RestEncryptionInfSvc{
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(12*time.Hour, 6*time.Hour),
-	}
+	}}
 }
 
-func NewRestConfigSignature(encryptionConfUrl string) types.Signature {
-	return &ConfigSignature{ConfSvc: NewRestEncryptionInfSvc(encryptionConfUrl)}
-}
-
-func NewSignature(confSvc types.EncryptionInfSvc) types.Signature {
+func Create(confSvc authz.EncryptionInfSvc) authz.Signature {
 	return &ConfigSignature{ConfSvc: confSvc}
 }
 
-func (restSign *ConfigSignature) EncryptionInfSvc() (types.EncryptionInfSvc, error) {
+func (restSign *ConfigSignature) EncryptionInfSvc() (authz.EncryptionInfSvc, error) {
 	return restSign.ConfSvc, nil
 }
 
@@ -65,7 +62,7 @@ func (restSign *ConfigSignature) CreateSign(params map[string]interface{}, appSe
 	return CreateSign(params, appSecret, timestamp)
 }
 
-func (restSign *ConfigSignature) Check(token *types.Token) (*types.XyzClaims, error) {
+func (restSign *ConfigSignature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
 	reqAppId := token.Params["App-Id"].(string)
 	reqTimestamp := token.Params["Timestamp"].(string)
 	if conf, err := restSign.ConfSvc.GetEncryptionInf(reqAppId); err != nil {
@@ -78,7 +75,7 @@ func (restSign *ConfigSignature) Check(token *types.Token) (*types.XyzClaims, er
 			if strings.Compare(sgn, token.Value) != 0 {
 				return nil, errors.New("invalid signature")
 			}
-			return &types.XyzClaims{
+			return &oauth2.XyzClaims{
 				Username: username,
 				UserId:   userId,
 				TenantId: conf.TenantId,
@@ -114,17 +111,17 @@ func CreateSign(params map[string]interface{}, appSecret, timestamp string) (str
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*types.EncryptionInf, error) {
+func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*oauth2.EncryptionInf, error) {
 	key := "app_id:" + appId
 	if val, b := svc.c.Get(key); b {
-		s := val.(types.EncryptionInf)
+		s := val.(oauth2.EncryptionInf)
 		return &s, nil
 	}
 
 	svc.mua.Lock()
 	defer svc.mua.Unlock()
 	if val, b := svc.c.Get(key); b {
-		s := val.(types.EncryptionInf)
+		s := val.(oauth2.EncryptionInf)
 		return &s, nil
 	}
 	var url string
@@ -138,7 +135,7 @@ func (svc *RestEncryptionInfSvc) GetEncryptionInf(appId string) (*types.Encrypti
 	if respBytes, err := utils.Get(url, sgn, appId, timestamp); err != nil {
 		return nil, err
 	} else {
-		var resp = &r.Resp[types.EncryptionInf]{}
+		var resp = &r.Resp[oauth2.EncryptionInf]{}
 		err = json.Unmarshal(respBytes, resp)
 		data := resp.BizData
 		svc.c.Set(key, data, 24*time.Hour)

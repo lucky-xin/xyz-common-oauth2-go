@@ -1,4 +1,4 @@
-package authz
+package intro
 
 import (
 	"encoding/json"
@@ -7,37 +7,47 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-go/collutil"
 	"github.com/lucky-xin/xyz-common-go/env"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/types"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"io"
 	"net/http"
 	"time"
 )
 
-type IntrospectChecker struct {
+type Checker struct {
 	checkTokenUrl string
 	clientId      string
 	clientSecret  string
 	claimKey      string
-	resolver      types.TokenResolver
+	resolver      resolver.TokenResolver
 }
 
-func NewIntrospectCheckerWithEnv() types.Checker {
-	return &IntrospectChecker{
+func Create(checkTokenUrl, clientId, clientSecret, claimKey string, resolver resolver.TokenResolver) *Checker {
+	return &Checker{
+		checkTokenUrl: checkTokenUrl,
+		clientId:      clientId,
+		clientSecret:  clientSecret,
+		claimKey:      claimKey,
+		resolver:      resolver,
+	}
+}
+
+func CreateWithEnv() *Checker {
+	return &Checker{
 		checkTokenUrl: env.GetString("OAUTH2_CHECK_TOKEN_URL", ""),
 		clientId:      env.GetString("OAUTH2_CLIENT_ID", ""),
 		clientSecret:  env.GetString("OAUTH2_CLIENT_SECRET", ""),
 		claimKey:      env.GetString("OAUTH2_RESP_CLAIMS_KEY", ""),
-		resolver:      resolver.NewDefaultTokenResolverWithEnv(),
+		resolver:      resolver.CreateWithEnv(),
 	}
 }
 
-func (checker *IntrospectChecker) TokenResolver() types.TokenResolver {
+func (checker *Checker) TokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 
-func (checker *IntrospectChecker) Check(key []byte, token *types.Token) (u *types.XyzClaims, err error) {
+func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzClaims, err error) {
 	auth := utils.ToBasicAuth(checker.clientId, checker.clientSecret)
 	if req, err := http.NewRequest("GET", checker.checkTokenUrl+"?token="+token.Value, nil); err != nil {
 		return nil, err
@@ -66,7 +76,7 @@ func (checker *IntrospectChecker) Check(key []byte, token *types.Token) (u *type
 			if checker.claimKey != "" {
 				origClaims = res[checker.claimKey].(map[string]interface{})
 			}
-			u = &types.XyzClaims{
+			u = &oauth2.XyzClaims{
 				RegisteredClaims: jwt.RegisteredClaims{},
 			}
 			u.RegisteredClaims.Issuer = collutil.StrVal(origClaims, "iss", "")
@@ -103,6 +113,6 @@ func (checker *IntrospectChecker) Check(key []byte, token *types.Token) (u *type
 	return nil, err
 }
 
-func (checker *IntrospectChecker) CheckWithContext(key []byte, c *gin.Context) (*types.XyzClaims, error) {
+func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {
 	return checker.Check(key, checker.resolver.Resolve(c))
 }
