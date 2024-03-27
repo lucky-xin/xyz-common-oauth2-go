@@ -27,6 +27,8 @@ func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
 	return &Svc{
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(expireMs, cleanupMs),
+		appId:             env.GetString("OAUTH2_CLIENT_ID", ""),
+		appSecret:         env.GetString("OAUTH2_CLIENT_SECRET", ""),
 	}
 }
 
