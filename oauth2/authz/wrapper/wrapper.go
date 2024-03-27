@@ -3,9 +3,11 @@ package wrapper
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/intro"
 	xjwt "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/jwt"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/signature"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
@@ -19,13 +21,29 @@ type Checker struct {
 }
 
 func CreateWithEnv() *Checker {
+	tokenResolver := resolver.CreateWithEnv()
+	checkers := map[oauth2.TokenType]authz.Checker{
+		oauth2.OAUTH2: xjwt.CreateWithEnv(),
+	}
+	url := env.GetString("OAUTH2_SIGN_ENCRYPTION_CONF_URL", "")
+	if url != "" {
+		checkers[oauth2.SIGN] = signature.CreateWithRest(url, tokenResolver)
+	}
+	url = env.GetString("OAUTH2_CHECK_TOKEN_URL", "")
+	if url != "" {
+		checkers[oauth2.INTRO] = intro.Create(
+			url,
+			env.GetString("OAUTH2_CLIENT_ID", ""),
+			env.GetString("OAUTH2_CLIENT_SECRET", ""),
+			env.GetString("OAUTH2_CHECK_TOKEN_CLAIMS_JP", ""),
+			tokenResolver,
+		)
+	}
+
 	return &Checker{
-		resolver: resolver.CreateWithEnv(),
+		resolver: tokenResolver,
 		tokenKey: oauth2.RestTokenKey,
-		checkers: map[oauth2.TokenType]authz.Checker{
-			oauth2.OAUTH2: xjwt.CreateWithEnv(),
-			oauth2.SIGN:   signature.CreateWithEnv(),
-		},
+		checkers: map[oauth2.TokenType]authz.Checker{},
 	}
 }
 

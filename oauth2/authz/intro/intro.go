@@ -37,8 +37,8 @@ func Create(checkTokenUrl, clientId, clientSecret, claimJp string, resolver reso
 func CreateWithEnv() *Checker {
 	return &Checker{
 		checkTokenUrl: env.GetString("OAUTH2_CHECK_TOKEN_URL", ""),
-		clientId:      env.GetString("OAUTH2_CHECK_TOKEN_CLI_ID", ""),
-		clientSecret:  env.GetString("OAUTH2_CHECK_TOKEN_CLI_SECRET", ""),
+		clientId:      env.GetString("OAUTH2_CLIENT_ID", ""),
+		clientSecret:  env.GetString("OAUTH2_CLIENT_SECRET", ""),
 		claimJp:       env.GetString("OAUTH2_CHECK_TOKEN_CLAIMS_JP", ""),
 		resolver:      resolver.CreateWithEnv(),
 	}

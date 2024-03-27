@@ -19,6 +19,7 @@ type TokenType string
 var (
 	OAUTH2 TokenType = "OAuth2"
 	SIGN   TokenType = "Signature"
+	INTRO  TokenType = "INTRO"
 )
 
 type Token struct {

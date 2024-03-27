@@ -39,7 +39,7 @@ type RestEncryptionInfSvc struct {
 
 func CreateWithEnv() authz.Signature {
 	return CreateWithRest(
-		env.GetString("OAUTH2_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf"),
+		env.GetString("OAUTH2_SIGN_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf"),
 	)
 }
 
