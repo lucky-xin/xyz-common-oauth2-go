@@ -31,10 +31,10 @@ func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
 }
 
 func CreateWithEnv() *Svc {
-	expireMs := env.GetInt64("OAUTH2_SIGN_ENCRYPTION_CONF_CACHE_EXPIRE_SECONDS", 6*time.Hour.Milliseconds())
-	cleanupMs := env.GetInt64("OAUTH2_SIGN_ENCRYPTION_CONF_CACHE_CLEANUP_SECONDS", 6*time.Hour.Milliseconds())
+	expireMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_EXPIRE_SECONDS", 6*time.Hour.Milliseconds())
+	cleanupMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_CLEANUP_SECONDS", 6*time.Hour.Milliseconds())
 	return Create(
-		env.GetString("OAUTH2_SIGN_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf"),
+		env.GetString("OAUTH2_ENCRYPTION_CONF_URL", "http://127.0.0.1:4000/encryption-conf"),
 		time.Duration(expireMs)*time.Millisecond,
 		time.Duration(cleanupMs)*time.Millisecond,
 	)
