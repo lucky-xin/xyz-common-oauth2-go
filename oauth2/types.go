@@ -71,8 +71,8 @@ func RestTokenKey() (byts []byte, err error) {
 		}
 
 		oauth2TokenKeyUrl := env.GetString("OAUTH2_TOKEN_KEY_URL", "https://127.0.0.1:6666/oauth2/token-key")
-		appId := env.GetString("APP_ID", "")
-		appSecret := env.GetString("APP_SECRET", "")
+		appId := env.GetString("OAUTH2_APP_ID", "")
+		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
 		var timestamp, sgn string
 		if appId != "" && appSecret != "" {
 			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
@@ -88,15 +88,15 @@ func RestTokenKey() (byts []byte, err error) {
 		if err != nil {
 			return
 		}
-		keyJsonPath := env.GetString("OAUTH2_KEY_JSON_PATH", "$.data.key")
+		keyJsonPath := env.GetString("OAUTH2_TOKEN_KEY_JP", "$.data.key")
 		var key interface{}
 		key, err = jsonpath.JsonPathLookup(resp, keyJsonPath)
 		if err != nil {
 			return
 		}
 		base64TokenKey := key.(string)
-		aesKey := env.GetString("AES_KEY", "")
-		aesIv := env.GetString("AES_IV", "")
+		aesKey := env.GetString("OAUTH2_TOKEN_KEY_AES_KEY", "")
+		aesIv := env.GetString("OAUTH2_TOKEN_KEY_AES_IV", "")
 		if aesKey != "" && aesIv != "" {
 			encryptor := aescbc.Encryptor{Key: aesKey, Iv: aesIv}
 			byts, err = encryptor.Decrypt(base64TokenKey)
