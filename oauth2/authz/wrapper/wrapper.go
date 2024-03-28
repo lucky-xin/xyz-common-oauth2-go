@@ -27,7 +27,7 @@ func CreateWithEnv() *Checker {
 	checkers := map[oauth2.TokenType]authz.Checker{
 		oauth2.OAUTH2: xjwt.CreateWithEnv(),
 	}
-	url := env.GetString("OAUTH2_SIGN_ENCRYPTION_CONF_URL", "")
+	url := env.GetString("OAUTH2_ENCRYPTION_CONF_ENDPOINT", "")
 	if url != "" {
 		checkers[oauth2.SIGN] = signature.CreateWithEnv()
 	}

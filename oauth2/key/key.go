@@ -39,7 +39,7 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 			return
 		}
 
-		oauth2TokenKeyUrl := env.GetString("OAUTH2_TOKEN_KEY_URL", "https://127.0.0.1:6666/oauth2/token-key")
+		oauth2TokenKeyUrl := env.GetString("OAUTH2_TOKEN_KEY_ENDPOINT", "https://127.0.0.1:6666/oauth2/token-key")
 		appId := env.GetString("OAUTH2_APP_ID", "")
 		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
 		var timestamp, sgn string
