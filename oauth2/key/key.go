@@ -9,6 +9,7 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
+	"log"
 	"sync"
 	"time"
 )
@@ -45,14 +46,14 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 		if appId != "" && appSecret != "" {
 			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
 		}
-		var respBytes []byte
-		respBytes, err = utils.Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
+		var rbyts []byte
+		rbyts, err = utils.Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
 		if err != nil {
 			return
 		}
-
+		log.Println("get token key resp:", string(rbyts))
 		var resp = map[string]interface{}{}
-		err = json.Unmarshal(respBytes, &resp)
+		err = json.Unmarshal(rbyts, &resp)
 		if err != nil {
 			return
 		}
@@ -60,6 +61,7 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 		var key interface{}
 		key, err = jsonpath.JsonPathLookup(resp, keyJsonPath)
 		if err != nil {
+			log.Println("json path lookup failed,", err.Error())
 			return
 		}
 		base64TokenKey := key.(string)
