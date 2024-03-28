@@ -8,15 +8,20 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 )
 
+// Checker JWT校验器
 type Checker struct {
+	// 解析token校验算法
 	ValidMethods []string
-	resolver     resolver.TokenResolver
+	// Token解析器
+	resolver resolver.TokenResolver
 }
 
+// Create 新建JWT校验器
 func Create(validMethods []string, resolver resolver.TokenResolver) *Checker {
 	return &Checker{ValidMethods: validMethods, resolver: resolver}
 }
 
+// CreateWithEnv 根据环境变量配置新建JWT校验器
 func CreateWithEnv() *Checker {
 	return &Checker{
 		ValidMethods: env.GetStringArray("OAUTH2_JWT_VALID_METHODS", []string{"HS512"}),
@@ -39,7 +44,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaim
 	}
 }
 
-func (checker *Checker) TokenResolver() resolver.TokenResolver {
+func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 

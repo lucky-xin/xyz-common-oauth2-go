@@ -8,8 +8,11 @@ import (
 	"strings"
 )
 
+// TokenResolver token解析器
 type TokenResolver interface {
+	// UriParamTokenName 支持url传递token时，参数名称
 	UriParamTokenName() string
+	// Resolve 获取Context token
 	Resolve(c *gin.Context) *oauth2.Token
 }
 

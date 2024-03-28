@@ -66,7 +66,7 @@ func (checker *Checker) Authorize() gin.HandlerFunc {
 	}
 }
 
-func (checker *Checker) TokenResolver() resolver.TokenResolver {
+func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 

@@ -32,7 +32,7 @@ func Create(confSvc conf.EncryptInfSvc) authz.Signature {
 	return &Signature{ConfSvc: confSvc}
 }
 
-func (restSign *Signature) EncryptionInfSvc() (conf.EncryptInfSvc, error) {
+func (restSign *Signature) GetEncryptionInfSvc() (conf.EncryptInfSvc, error) {
 	return restSign.ConfSvc, nil
 }
 

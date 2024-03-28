@@ -42,14 +42,14 @@ func Create(confSvc conf.EncryptInfSvc, resolver resolver.TokenResolver) *Checke
 	}
 }
 
-func (checker *Checker) TokenResolver() resolver.TokenResolver {
+func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 
 func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaims, error) {
 	reqAppId := token.Params["App-Id"].(string)
 	reqTimestamp := token.Params["Timestamp"].(string)
-	confSvc, err := checker.sign.EncryptionInfSvc()
+	confSvc, err := checker.sign.GetEncryptionInfSvc()
 	if err != nil {
 		return nil, err
 	}
