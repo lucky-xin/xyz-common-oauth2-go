@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"io"
 	"net/http"
 )
@@ -24,8 +24,8 @@ func Get(url, sgn, appId, timestamp string) ([]byte, error) {
 	} else {
 		if sgn != "" {
 			req.Header.Set("Authorization", "Signature "+sgn)
-			req.Header.Set(sign.AppFieldName, appId)
-			req.Header.Set(sign.TimestampFieldName, timestamp)
+			req.Header.Set(oauth2.AppFieldName, appId)
+			req.Header.Set(oauth2.TimestampFieldName, timestamp)
 		}
 		if resp, err := HttpClient.Do(req); err == nil {
 			defer func(Body io.ReadCloser) {

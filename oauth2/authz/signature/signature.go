@@ -47,8 +47,8 @@ func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 }
 
 func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaims, error) {
-	reqAppId := token.Params[osign.AppFieldName]
-	reqTimestamp := token.Params[osign.TimestampFieldName]
+	reqAppId := token.Params[oauth2.AppFieldName]
+	reqTimestamp := token.Params[oauth2.TimestampFieldName]
 	confSvc, err := checker.sign.GetEncryptionInfSvc()
 	if err != nil {
 		return nil, err

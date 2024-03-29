@@ -7,8 +7,10 @@ import (
 type TokenType string
 
 var (
-	OAUTH2 TokenType = "OAuth2"
-	SIGN   TokenType = "Signature"
+	OAUTH2             TokenType = "OAuth2"
+	SIGN               TokenType = "Signature"
+	AppFieldName                 = "App-Id"
+	TimestampFieldName           = "Timestamp"
 )
 
 // Token 信息
