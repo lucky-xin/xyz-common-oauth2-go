@@ -1,17 +1,7 @@
 package oauth2
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/lucky-xin/xyz-common-go/env"
-	aescbc "github.com/lucky-xin/xyz-common-go/security/aes.cbc"
-	"github.com/lucky-xin/xyz-common-go/sign"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
-	"github.com/oliveagle/jsonpath"
-	"github.com/patrickmn/go-cache"
-	"sync"
-	"time"
 )
 
 type TokenType string
@@ -68,71 +58,4 @@ type EncryptionInf struct {
 	Username string `json:"username" binding:"required"`
 	// 用户id
 	UserId int64 `json:"userId" binding:"required"`
-}
-
-var (
-	c  = cache.New(24*time.Hour, 24*time.Hour)
-	mu sync.RWMutex
-)
-
-func RestTokenKey() (byts []byte, err error) {
-	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
-	if tk != "" {
-		byts = []byte(tk)
-		return
-	}
-
-	cacheKey := "token_key"
-	if tokenKey, exist := c.Get(cacheKey); !exist {
-		mu.Lock()
-		defer mu.Unlock()
-		if tokenKey, exist = c.Get(cacheKey); exist {
-			byts = tokenKey.([]byte)
-			return
-		}
-
-		oauth2TokenKeyUrl := env.GetString("OAUTH2_TOKEN_KEY_ENDPOINT", "https://127.0.0.1:6666/oauth2/token-key")
-		appId := env.GetString("OAUTH2_APP_ID", "")
-		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
-		var timestamp, sgn string
-		if appId != "" && appSecret != "" {
-			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
-		}
-		var respBytes []byte
-		respBytes, err = utils.Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
-		if err != nil {
-			return
-		}
-
-		var resp = map[string]interface{}{}
-		err = json.Unmarshal(respBytes, &resp)
-		if err != nil {
-			return
-		}
-		keyJsonPath := env.GetString("OAUTH2_TOKEN_KEY_JP", "$.data.key")
-		var key interface{}
-		key, err = jsonpath.JsonPathLookup(resp, keyJsonPath)
-		if err != nil {
-			return
-		}
-		base64TokenKey := key.(string)
-		aesKey := env.GetString("OAUTH2_TOKEN_KEY_AES_KEY", "")
-		aesIv := env.GetString("OAUTH2_TOKEN_KEY_AES_IV", "")
-		if aesKey != "" && aesIv != "" {
-			encryptor := aescbc.Encryptor{Key: aesKey, Iv: aesIv}
-			byts, err = encryptor.Decrypt(base64TokenKey)
-			if err != nil {
-				return
-			}
-		} else {
-			byts, err = base64.StdEncoding.DecodeString(base64TokenKey)
-			if err != nil {
-				return
-			}
-		}
-		c.Set(cacheKey, byts, 24*time.Hour)
-	} else {
-		byts = tokenKey.([]byte)
-	}
-	return
 }

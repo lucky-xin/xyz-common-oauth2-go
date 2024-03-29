@@ -6,6 +6,7 @@ import (
 	aescbc "github.com/lucky-xin/xyz-common-go/security/aes.cbc"
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
@@ -76,7 +77,7 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 			aesIv = inf.AESIv
 		}
 		encryptor := aescbc.Encryptor{Key: aesKey, Iv: aesIv}
-		byts, err = encryptor.Decrypt(base64TokenKey)
+		byts, err = encryptor.DecryptBase64(base64TokenKey)
 		if err != nil {
 			return
 		}
@@ -89,4 +90,11 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 
 func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKey {
 	return &RestTokenKey{svc, expiresMs}
+}
+
+func CreateWithEnv() *RestTokenKey {
+	return &RestTokenKey{
+		rest.CreateWithEnv(),
+		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_CACHE_EXPIRES_MS", 6*time.Hour.Milliseconds())) * time.Millisecond,
+	}
 }

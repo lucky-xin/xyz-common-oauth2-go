@@ -47,7 +47,8 @@ func Create(r resolver.TokenResolver, tk authz.TokenKey, cs map[oauth2.TokenType
 
 func (checker *Checker) Authorize() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		byts, err := oauth2.RestTokenKey()
+		tokenKey := key.CreateWithEnv()
+		byts, err := tokenKey.Get()
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, r.Failed(err.Error()))
 			c.Abort()
