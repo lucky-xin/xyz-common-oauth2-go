@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"sort"
@@ -26,14 +25,14 @@ type Signature struct {
 	ConfSvc conf.EncryptInfSvc
 }
 
-func CreateWithRest(encryptionConfUrl string, expireMs, cleanupMs time.Duration) authz.Signature {
+func CreateWithRest(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Signature {
 	return &Signature{ConfSvc: rest.Create(encryptionConfUrl, expireMs, cleanupMs)}
 }
-func CreateWithEnv() authz.Signature {
+func CreateWithEnv() *Signature {
 	return Create(rest.CreateWithEnv())
 }
 
-func Create(confSvc conf.EncryptInfSvc) authz.Signature {
+func Create(confSvc conf.EncryptInfSvc) *Signature {
 	return &Signature{ConfSvc: confSvc}
 }
 
