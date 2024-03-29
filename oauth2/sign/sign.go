@@ -82,7 +82,7 @@ func CreateSign(params map[string]string, appSecret, timestamp string) (string, 
 		if "App-Id" == key || "Timestamp" == key {
 			continue
 		}
-		buffer.WriteString(fmt.Sprintf("%v", params[]))
+		buffer.WriteString(fmt.Sprintf("%v", params[key]))
 		if idx != length-1 {
 			buffer.WriteString("&")
 		}
