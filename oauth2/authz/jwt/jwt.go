@@ -49,7 +49,11 @@ func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 }
 
 func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {
-	return checker.Check(key, checker.resolver.Resolve(c))
+	t, err := checker.resolver.Resolve(c)
+	if err != nil {
+		return nil, err
+	}
+	return checker.Check(key, t)
 }
 
 // CreateToken 生成jwt

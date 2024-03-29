@@ -81,5 +81,9 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzCla
 }
 
 func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {
-	return checker.Check(key, checker.resolver.Resolve(c))
+	t, err := checker.resolver.Resolve(c)
+	if err != nil {
+		return nil, err
+	}
+	return checker.Check(key, t)
 }
