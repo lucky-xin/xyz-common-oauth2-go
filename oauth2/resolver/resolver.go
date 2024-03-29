@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
@@ -13,7 +14,14 @@ type TokenResolver interface {
 	// UriParamTokenName 支持url传递token时，参数名称
 	UriParamTokenName() string
 	// Resolve 获取Context token
-	Resolve(c *gin.Context) *oauth2.Token
+	Resolve(c *gin.Context) (t *oauth2.Token, err error)
+}
+
+type parse func(c *gin.Context, t *oauth2.Token) error
+
+var parses = map[oauth2.TokenType]parse{
+	oauth2.SIGN:   parseSign,
+	oauth2.OAUTH2: parseOAuth2,
 }
 
 type DefaultTokenResolver struct {
@@ -25,36 +33,61 @@ func (d DefaultTokenResolver) UriParamTokenName() string {
 	return d.paramTokenName
 }
 
-func (d DefaultTokenResolver) Resolve(c *gin.Context) *oauth2.Token {
+func (d DefaultTokenResolver) Resolve(c *gin.Context) (t *oauth2.Token, err error) {
 	authorization := c.GetHeader("Authorization")
 	if authorization != "" {
 		log.Print("access token from header")
-		return d.Parse(authorization, c)
+		return d.createToken(authorization, c)
 	}
 	token := c.Query(d.paramTokenName)
 	if token != "" {
 		log.Print("access token from query")
-		return d.Parse(authorization, c)
+		return d.createToken(authorization, c)
 	}
-	return nil
+	return
 }
 
-func (d DefaultTokenResolver) Parse(authorization string, c *gin.Context) *oauth2.Token {
+func (d DefaultTokenResolver) createToken(authorization string, c *gin.Context) (t *oauth2.Token, err error) {
 	split := strings.Split(authorization, " ")
 	if len(split) == 2 {
 		tt := oauth2.TokenType(strings.TrimSpace(split[0]))
-		t := &oauth2.Token{Type: tt, Value: strings.TrimSpace(split[1])}
-		if tt == oauth2.SIGN {
-			appId := c.GetHeader("App-Id")
-			timestamp := c.GetHeader("Timestamp")
-			t.Params = map[string]string{
-				"App-Id":    appId,
-				"Timestamp": timestamp,
-			}
+		t = &oauth2.Token{Type: tt, Value: strings.TrimSpace(split[1])}
+		p := parses[tt]
+		if p == nil {
+			err = errors.New("invalid token type")
+			return
 		}
-		return t
+		err = p(c, t)
+		return
 	}
-	return &oauth2.Token{Type: oauth2.OAUTH2, Value: strings.TrimSpace(split[0])}
+	t = &oauth2.Token{Type: oauth2.OAUTH2, Value: strings.TrimSpace(split[0])}
+	return
+}
+
+func parseSign(c *gin.Context, t *oauth2.Token) (err error) {
+	appId := c.GetHeader("App-Id")
+	timestamp := c.GetHeader("Timestamp")
+	t.Params = map[string]string{}
+	if c.ContentType() == "application/json" {
+		err = c.BindJSON(&t.Params)
+		if err != nil {
+			return err
+		}
+	} else {
+		for k, v := range c.Request.URL.Query() {
+			t.Params[k] = strings.Join(v, ",")
+		}
+		for k, v := range c.Request.PostForm {
+			t.Params[k] = strings.Join(v, ",")
+		}
+	}
+	t.Params["App-Id"] = appId
+	t.Params["Timestamp"] = timestamp
+	return nil
+}
+
+func parseOAuth2(c *gin.Context, t *oauth2.Token) error {
+	return nil
 }
 
 func Create(paramTokenName string, tokenTypes []oauth2.TokenType) TokenResolver {
