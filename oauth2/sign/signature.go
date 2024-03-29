@@ -78,7 +78,11 @@ func CreateSign(params map[string]string, appSecret, timestamp string) (string, 
 	var buffer bytes.Buffer
 	length := len(keys)
 	for idx := range keys {
-		buffer.WriteString(fmt.Sprintf("%v", params[keys[idx]]))
+		key := keys[idx]
+		if "App-Id" == key || "Timestamp" == key {
+			continue
+		}
+		buffer.WriteString(fmt.Sprintf("%v", params[]))
 		if idx != length-1 {
 			buffer.WriteString("&")
 		}
