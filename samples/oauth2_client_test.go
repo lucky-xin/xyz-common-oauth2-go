@@ -14,7 +14,6 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/key"
 	resolver2 "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
-	sign2 "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
 	"io"
 	"net/http"
 	"testing"
@@ -35,8 +34,8 @@ func TestOAUth2CliTest(tet *testing.T) {
 	url := "http://127.0.0.1:6666/oauth2/token-key"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("Authorization", "Signature "+sgn)
-	req.Header.Set(sign2.AppFieldName, appId)
-	req.Header.Set(sign2.TimestampFieldName, timestamp)
+	req.Header.Set(oauth2.AppFieldName, appId)
+	req.Header.Set(oauth2.TimestampFieldName, timestamp)
 	resp, err := client.Do(req)
 
 	if err != nil {
