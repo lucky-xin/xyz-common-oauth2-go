@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"errors"
 	"github.com/goccy/go-json"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -13,6 +14,18 @@ var (
 	AppFieldName                 = "App-Id"
 	TimestampFieldName           = "Timestamp"
 )
+
+func (m *TokenType) MarshalBinary() ([]byte, error) {
+	return []byte(*m), nil
+}
+
+func (m *TokenType) UnmarshalBinary(data []byte) error {
+	*m = TokenType(data)
+	if m == nil {
+		return errors.New("invalid token type")
+	}
+	return nil
+}
 
 // Token 信息
 type Token struct {
