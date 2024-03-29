@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
 	"log"
 	"strings"
 )
@@ -65,8 +66,8 @@ func (d DefaultTokenResolver) createToken(authorization string, c *gin.Context) 
 }
 
 func parseSign(c *gin.Context, t *oauth2.Token) (err error) {
-	appId := c.GetHeader("App-Id")
-	timestamp := c.GetHeader("Timestamp")
+	appId := c.GetHeader(sign.AppFieldName)
+	timestamp := c.GetHeader(sign.TimestampFieldName)
 	t.Params = map[string]string{}
 	if c.ContentType() == "application/json" {
 		err = c.BindJSON(&t.Params)
@@ -81,8 +82,8 @@ func parseSign(c *gin.Context, t *oauth2.Token) (err error) {
 			t.Params[k] = strings.Join(v, ",")
 		}
 	}
-	t.Params["App-Id"] = appId
-	t.Params["Timestamp"] = timestamp
+	t.Params[sign.AppFieldName] = appId
+	t.Params[sign.TimestampFieldName] = timestamp
 	return nil
 }
 

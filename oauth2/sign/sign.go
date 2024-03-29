@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+var (
+	AppFieldName       = "App-Id"
+	TimestampFieldName = "Timestamp"
+)
+
 type Signature struct {
 	ConfSvc conf.EncryptInfSvc
 }
@@ -41,8 +46,8 @@ func (restSign *Signature) CreateSign(params map[string]string, appSecret, times
 }
 
 func (restSign *Signature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
-	reqAppId := token.Params["App-Id"]
-	reqTimestamp := token.Params["Timestamp"]
+	reqAppId := token.Params[AppFieldName]
+	reqTimestamp := token.Params[TimestampFieldName]
 	if inf, err := restSign.ConfSvc.GetEncryptInf(reqAppId); err != nil {
 		appSecret := inf.AppSecret
 		username := inf.Username
@@ -79,7 +84,7 @@ func CreateSign(params map[string]string, appSecret, timestamp string) (string, 
 	length := len(keys)
 	for idx := range keys {
 		key := keys[idx]
-		if "App-Id" == key || "Timestamp" == key {
+		if AppFieldName == key || TimestampFieldName == key {
 			continue
 		}
 		buffer.WriteString(fmt.Sprintf("%v", params[key]))
