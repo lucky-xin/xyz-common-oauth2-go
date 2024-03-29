@@ -47,7 +47,7 @@ func (d DefaultTokenResolver) Parse(authorization string, c *gin.Context) *oauth
 		if tt == oauth2.SIGN {
 			appId := c.GetHeader("App-Id")
 			timestamp := c.GetHeader("Timestamp")
-			t.Params = map[string]interface{}{
+			t.Params = map[string]string{
 				"App-Id":    appId,
 				"Timestamp": timestamp,
 			}

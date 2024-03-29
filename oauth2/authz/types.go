@@ -22,7 +22,7 @@ type Signature interface {
 	// GetEncryptionInfSvc 获取数字签名密钥信息服务
 	GetEncryptionInfSvc() (conf.EncryptInfSvc, error)
 	// CreateSign 新建数字签名
-	CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error)
+	CreateSign(params map[string]string, appSecret, timestamp string) (string, error)
 	// Check 检验数字签名
 	Check(token *oauth2.Token) (*oauth2.XyzClaims, error)
 }

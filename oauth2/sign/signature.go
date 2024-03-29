@@ -36,13 +36,13 @@ func (restSign *Signature) GetEncryptionInfSvc() (conf.EncryptInfSvc, error) {
 	return restSign.ConfSvc, nil
 }
 
-func (restSign *Signature) CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
+func (restSign *Signature) CreateSign(params map[string]string, appSecret, timestamp string) (string, error) {
 	return CreateSign(params, appSecret, timestamp)
 }
 
 func (restSign *Signature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
-	reqAppId := token.Params["App-Id"].(string)
-	reqTimestamp := token.Params["Timestamp"].(string)
+	reqAppId := token.Params["App-Id"]
+	reqTimestamp := token.Params["Timestamp"]
 	if inf, err := restSign.ConfSvc.GetEncryptInf(reqAppId); err != nil {
 		appSecret := inf.AppSecret
 		username := inf.Username
@@ -69,7 +69,7 @@ func (restSign *Signature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error)
 	return nil, nil
 }
 
-func CreateSign(params map[string]interface{}, appSecret, timestamp string) (string, error) {
+func CreateSign(params map[string]string, appSecret, timestamp string) (string, error) {
 	keys := make([]string, 0, len(params))
 	for key := range params {
 		keys = append(keys, key)
