@@ -19,7 +19,7 @@ var (
 )
 
 func Get(url, sgn, appId, timestamp string) ([]byte, error) {
-	if req, err := http.NewRequest("GET", url, nil); err != nil {
+	if req, err := http.NewRequest(http.MethodGet, url, nil); err != nil {
 		return nil, err
 	} else {
 		if sgn != "" {
@@ -44,7 +44,7 @@ func Get(url, sgn, appId, timestamp string) ([]byte, error) {
 func ReqParams(c *gin.Context) (map[string]interface{}, error) {
 	contentType := c.ContentType()
 	method := c.Request.Method
-	if "application/json" == contentType && (method == "POST" || method == "PUT") {
+	if "application/json" == contentType && (method == http.MethodPut || method == http.MethodPost) {
 		var bodyBytes []byte
 		if c.Request.Body != nil {
 			bodyBytes, _ = io.ReadAll(c.Request.Body)

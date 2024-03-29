@@ -33,7 +33,7 @@ func TestOAUth2CliTest(tet *testing.T) {
 	//获取token key
 	client := &http.Client{}
 	url := "http://127.0.0.1:6666/oauth2/token-key"
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("Authorization", "Signature "+sgn)
 	req.Header.Set(sign2.AppFieldName, appId)
 	req.Header.Set(sign2.TimestampFieldName, timestamp)
@@ -81,7 +81,7 @@ func TestOAUth2CliTest(tet *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonBytes))
+	req, err = http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBytes))
 	if err != nil {
 		panic(err)
 	}
