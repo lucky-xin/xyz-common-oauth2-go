@@ -14,17 +14,17 @@ var (
 // Token 信息
 type Token struct {
 	// Type Token类型
-	Type TokenType `json:"type" binding:"required"`
+	Type TokenType `json:"type" binding:"required" redis:"type"`
 	// Token值
-	Value string `json:"value" binding:"required"`
+	Value string `json:"value" binding:"required" redis:"value"`
 	// 租户id
-	Tid int64 `json:"tid" binding:"tid"`
+	Tid int64 `json:"tid" binding:"tid" redis:"tid"`
 	// 用户id
-	Uid int64 `json:"uid" binding:"required"`
+	Uid int64 `json:"uid" binding:"required" redis:"uid"`
 	// 用户名称
-	Uname string `json:"uname" binding:"uname"`
+	Uname string `json:"uname" binding:"uname" redis:"uname"`
 	// 扩展参数
-	Params map[string]interface{} `json:"params" binding:"required"`
+	Params map[string]string `json:"params" binding:"required" redis:"params"`
 }
 
 // XyzClaims 自定义JWT claims
