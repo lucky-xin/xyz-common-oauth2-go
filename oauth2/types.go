@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"github.com/goccy/go-json"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -27,6 +28,14 @@ type Token struct {
 	Uname string `json:"uname" binding:"uname" redis:"uname"`
 	// 扩展参数
 	Params map[string]string `json:"params" binding:"required" redis:"params"`
+}
+
+func (m *Token) MarshalBinary() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *Token) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, m)
 }
 
 // XyzClaims 自定义JWT claims
