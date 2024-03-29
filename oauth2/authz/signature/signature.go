@@ -53,30 +53,28 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.XyzClaim
 	if err != nil {
 		return nil, err
 	}
-	if inf, err := confSvc.GetEncryptInf(reqAppId); err != nil {
-		appSecret := inf.AppSecret
-		username := inf.Username
-		userId := inf.UserId
-		if sgn, err := checker.sign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
-			return nil, err
-		} else {
-			if strings.Compare(sgn, token.Value) != 0 {
-				return nil, errors.New("invalid signature")
-			}
-			return &oauth2.XyzClaims{
-				Username: username,
-				UserId:   userId,
-				TenantId: inf.TenantId,
-				RegisteredClaims: jwt.RegisteredClaims{
-					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-					IssuedAt:  jwt.NewNumericDate(time.Now()),
-					NotBefore: jwt.NewNumericDate(time.Now()),
-					Subject:   username,
-				},
-			}, nil
-		}
+	inf, err := confSvc.GetEncryptInf(reqAppId)
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil
+	if sgn, err := checker.sign.CreateSign(token.Params, inf.AppSecret, reqTimestamp); err != nil {
+		return nil, err
+	} else {
+		if strings.Compare(sgn, token.Value) != 0 {
+			return nil, errors.New("invalid signature")
+		}
+		return &oauth2.XyzClaims{
+			Username: inf.Username,
+			UserId:   inf.UserId,
+			TenantId: inf.TenantId,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+				Subject:   inf.Username,
+			},
+		}, nil
+	}
 }
 
 func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {

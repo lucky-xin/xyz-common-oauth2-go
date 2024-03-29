@@ -70,6 +70,6 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 		err = json.Unmarshal(respBytes, resp)
 		data := resp.BizData
 		svc.c.Set(key, data, 24*time.Hour)
-		return &data, err
+		return &data, nil
 	}
 }
