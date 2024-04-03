@@ -52,7 +52,6 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 		if err != nil {
 			return
 		}
-		log.Println("get token key resp:", string(rbyts))
 		var resp = map[string]interface{}{}
 		err = json.Unmarshal(rbyts, &resp)
 		if err != nil {
