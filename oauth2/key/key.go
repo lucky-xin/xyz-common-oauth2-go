@@ -1,16 +1,20 @@
 package key
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"github.com/lucky-xin/xyz-common-go/env"
-	aescbc "github.com/lucky-xin/xyz-common-go/security/aes.cbc"
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
+	"github.com/tjfoc/gmsm/sm2"
+	"io"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -64,22 +68,36 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 			log.Println("json path lookup failed,", err.Error())
 			return
 		}
-		base64TokenKey := key.(string)
-		aesKey := env.GetString("OAUTH2_TOKEN_KEY_AES_KEY", "")
-		aesIv := env.GetString("OAUTH2_TOKEN_KEY_AES_IV", "")
-		if (aesKey == "" || aesIv == "") && rest.encryptSvc != nil {
+		hexTokenKey := key.(string)
+		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
+		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
+		if (privateKeyHex == "" || publicKeyHex == "") && rest.encryptSvc != nil {
 			inf, err := rest.encryptSvc.GetEncryptInf(appId)
 			if err != nil {
 				return nil, err
 			}
-			aesKey = inf.AESKey
-			aesIv = inf.AESIv
+			reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(inf.SM2PrivateKey))
+			bts, err := io.ReadAll(reader)
+			if err != nil {
+				return nil, err
+			}
+			privateKeyHex = string(bts)
+			reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(inf.SM2PublicKey))
+			bts, err = io.ReadAll(reader)
+			if err != nil {
+				return nil, err
+			}
+			publicKeyHex = string(bts)
 		}
-		encryptor := aescbc.Encryptor{Key: aesKey, Iv: aesIv}
-		byts, err = encryptor.DecryptBase64(base64TokenKey)
+		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
 		if err != nil {
-			return
+			return nil, err
 		}
+		tk, err = encrypt.Decrypt(hexTokenKey, sm2.C1C3C2)
+		if err != nil {
+			return nil, err
+		}
+		byts = []byte(tk)
 		c.Set(cacheKey, byts, rest.expiresMs)
 	} else {
 		byts = tokenKey.([]byte)

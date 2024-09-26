@@ -73,10 +73,10 @@ type EncryptionInf struct {
 	AppId string `json:"appId" binding:"required"`
 	// APP Secret
 	AppSecret string `json:"appSecret" binding:"required"`
-	// 获取Token key时，AES加密key
-	AESKey string `json:"aesKey" binding:"required"`
-	// 获取Token key时，AES加密iv
-	AESIv string `json:"aesIv" binding:"required"`
+	// SM2 私钥
+	SM2PrivateKey string `json:"sm2PrivateKey" binding:"required"`
+	// SM2 公钥
+	SM2PublicKey string `json:"sm2PublicKey" binding:"required"`
 	// 租户id
 	TenantId int32 `json:"tenantId" binding:"required"`
 	// 用户名称

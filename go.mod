@@ -7,12 +7,14 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/lucky-xin/xyz-common-go v1.3.0
+	github.com/lucky-xin/xyz-gmsm-go v1.0.2
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/tjfoc/gmsm v1.4.1
 )
 
 require (
-	github.com/bytedance/sonic v1.12.2 // indirect
+	github.com/bytedance/sonic v1.12.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
