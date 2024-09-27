@@ -50,6 +50,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (userDetails *oau
 			userDetails.ExpiresAt = claims.ExpiresAt
 			userDetails.NotBefore = claims.NotBefore
 			userDetails.IssuedAt = claims.IssuedAt
+			return userDetails, nil
 		}
 		return &oauth2.UserDetails{
 			ExpiresAt: claims.ExpiresAt,
