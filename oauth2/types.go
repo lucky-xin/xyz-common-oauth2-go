@@ -70,6 +70,15 @@ type UserDetails struct {
 	Id       int64  `json:"id"`
 	TenantId int32  `json:"tenantId"`
 	Username string `json:"username"`
+
+	// the `exp` (Expiration Time) claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
+	ExpiresAt *jwt.NumericDate `json:"exp,omitempty"`
+
+	// the `nbf` (Not Before) claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.5
+	NotBefore *jwt.NumericDate `json:"nbf,omitempty"`
+
+	// the `iat` (Issued At) claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.6
+	IssuedAt *jwt.NumericDate `json:"iat,omitempty"`
 }
 
 // KeyInf JWT解析key

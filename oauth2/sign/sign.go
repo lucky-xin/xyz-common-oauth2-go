@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/details"
@@ -50,6 +51,13 @@ func (restSign *Signature) Check(token *oauth2.Token) (details *oauth2.UserDetai
 			if strings.Compare(sgn, token.Value) != 0 {
 				return nil, errors.New("invalid signature")
 			}
+			details, err = restSign.DetailsSvc.Get(inf.Username)
+			if err != nil {
+				return nil, err
+			}
+			details.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Second * 10))
+			details.NotBefore = jwt.NewNumericDate(time.Now())
+			details.IssuedAt = jwt.NewNumericDate(time.Now())
 			return restSign.DetailsSvc.Get(inf.Username)
 		}
 	} else {

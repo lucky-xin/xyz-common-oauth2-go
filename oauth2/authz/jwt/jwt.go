@@ -33,7 +33,7 @@ func CreateWithEnv() *Checker {
 	}
 }
 
-func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.UserDetails, error) {
+func (checker *Checker) Check(key []byte, token *oauth2.Token) (userDetails *oauth2.UserDetails, err error) {
 	claims := &oauth2.XyzClaims{}
 	parser := jwt.NewParser(
 		jwt.WithValidMethods(checker.ValidMethods),
@@ -43,12 +43,21 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (*oauth2.UserDeta
 		return key, nil
 	}); err == nil {
 		if checker.detailsSvc != nil {
-			return checker.detailsSvc.Get(claims.Username)
+			userDetails, err = checker.detailsSvc.Get(claims.Username)
+			if err != nil {
+				return nil, err
+			}
+			userDetails.ExpiresAt = claims.ExpiresAt
+			userDetails.NotBefore = claims.NotBefore
+			userDetails.IssuedAt = claims.IssuedAt
 		}
 		return &oauth2.UserDetails{
-			Id:       claims.UserId,
-			Username: claims.Username,
-			TenantId: claims.TenantId,
+			ExpiresAt: claims.ExpiresAt,
+			NotBefore: claims.NotBefore,
+			IssuedAt:  claims.IssuedAt,
+			Id:        claims.UserId,
+			Username:  claims.Username,
+			TenantId:  claims.TenantId,
 		}, nil
 	} else {
 		return nil, err
