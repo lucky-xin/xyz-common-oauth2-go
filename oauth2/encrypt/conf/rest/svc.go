@@ -7,7 +7,9 @@ import (
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/patrickmn/go-cache"
+	"github.com/tjfoc/gmsm/sm2"
 	"sync"
 	"time"
 )
@@ -36,7 +38,7 @@ func CreateWithEnv() *Svc {
 	expireMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_EXPIRE_MS", 6*time.Hour.Milliseconds())
 	cleanupMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_CLEANUP_MS", 6*time.Hour.Milliseconds())
 	return Create(
-		env.GetString("OAUTH2_ENCRYPTION_CONF_ENDPOINT", "http://127.0.0.1:4000/encryption-conf"),
+		env.GetString("OAUTH2_ENCRYPTION_CONF_ENDPOINT", "http://127.0.0.1:3000/oauth2/encryption/config"),
 		time.Duration(expireMs)*time.Millisecond,
 		time.Duration(cleanupMs)*time.Millisecond,
 	)
@@ -56,20 +58,33 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 		return &s, nil
 	}
 	var url string
-	if svc.EncryptionConfUrl[len(svc.EncryptionConfUrl)-1] == '/' {
-		url = svc.EncryptionConfUrl + appId
-	} else {
-		url = svc.EncryptionConfUrl + "/" + appId
-	}
-
-	timestamp, sgn := sign.SignWithTimestamp(svc.appSecret, "")
+	queryString := "app_id=" + appId
+	url = svc.EncryptionConfUrl + "?" + queryString
+	timestamp, sgn := sign.SignWithTimestamp(svc.appSecret, queryString)
 	if respBytes, err := utils.Get(url, sgn, appId, timestamp); err != nil {
 		return nil, err
 	} else {
-		var resp = &r.Resp[oauth2.EncryptionInf]{}
-		err = json.Unmarshal(respBytes, resp)
-		data := resp.BizData
-		svc.c.Set(key, data, 24*time.Hour)
-		return &data, nil
+		var resp2 = &r.Resp[string]{}
+		err = json.Unmarshal(respBytes, resp2)
+		if err != nil {
+			return nil, err
+		}
+		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
+		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
+		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+		if err != nil {
+			return nil, err
+		}
+		plaintext, err := encrypt.Decrypt(resp2.BizData, sm2.C1C3C2)
+		if err != nil {
+			return nil, err
+		}
+		var conf = &oauth2.EncryptionInf{}
+		err = json.Unmarshal([]byte(plaintext), conf)
+		if err != nil {
+			return nil, err
+		}
+		svc.c.Set(key, conf, 24*time.Hour)
+		return conf, nil
 	}
 }

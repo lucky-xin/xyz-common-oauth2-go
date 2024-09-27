@@ -1,7 +1,6 @@
 package key
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/sign"
@@ -12,9 +11,7 @@ import (
 	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
-	"io"
 	"log"
-	"strings"
 	"sync"
 	"time"
 )
@@ -71,24 +68,6 @@ func (rest *RestTokenKey) Get() (byts []byte, err error) {
 		hexTokenKey := key.(string)
 		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
 		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
-		if (privateKeyHex == "" || publicKeyHex == "") && rest.encryptSvc != nil {
-			inf, err := rest.encryptSvc.GetEncryptInf(appId)
-			if err != nil {
-				return nil, err
-			}
-			reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(inf.SM2PrivateKey))
-			bts, err := io.ReadAll(reader)
-			if err != nil {
-				return nil, err
-			}
-			privateKeyHex = string(bts)
-			reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(inf.SM2PublicKey))
-			bts, err = io.ReadAll(reader)
-			if err != nil {
-				return nil, err
-			}
-			publicKeyHex = string(bts)
-		}
 		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
 		if err != nil {
 			return nil, err

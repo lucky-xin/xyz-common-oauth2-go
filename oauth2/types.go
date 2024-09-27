@@ -67,16 +67,16 @@ type KeyInf struct {
 	Alg string `json:"alg" binding:"required"`
 }
 
-// EncryptionInf AES加密配置信息
+// EncryptionInf 加密配置信息
 type EncryptionInf struct {
 	// APP id
 	AppId string `json:"appId" binding:"required"`
 	// APP Secret
 	AppSecret string `json:"appSecret" binding:"required"`
 	// SM2 私钥
-	SM2PrivateKey string `json:"sm2PrivateKey" binding:"required"`
+	SM2PrivateKey []byte `json:"sm2PrivateKey" binding:"required"`
 	// SM2 公钥
-	SM2PublicKey string `json:"sm2PublicKey" binding:"required"`
+	SM2PublicKey []byte `json:"sm2PublicKey" binding:"required"`
 	// 租户id
 	TenantId int32 `json:"tenantId" binding:"required"`
 	// 用户名称
