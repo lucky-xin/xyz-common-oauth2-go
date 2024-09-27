@@ -7,65 +7,54 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/details"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"sort"
 	"strings"
 	"time"
 )
 
 type Signature struct {
-	ConfSvc conf.EncryptInfSvc
+	DetailsSvc authz.UserDetailsSvc
+	EncryptSvc conf.EncryptInfSvc
 }
 
-func CreateWithRest(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Signature {
-	return &Signature{ConfSvc: rest.Create(encryptionConfUrl, expireMs, cleanupMs)}
+func CreateWithRest(expireMs time.Duration) *Signature {
+	return &Signature{DetailsSvc: details.Create(expireMs)}
 }
 func CreateWithEnv() *Signature {
-	return Create(rest.CreateWithEnv())
+	return Create(
+		details.CreateWithEnv(),
+		conf.CreateWithEnv(),
+	)
 }
 
-func Create(confSvc conf.EncryptInfSvc) *Signature {
-	return &Signature{ConfSvc: confSvc}
-}
-
-func (restSign *Signature) GetEncryptionInfSvc() (conf.EncryptInfSvc, error) {
-	return restSign.ConfSvc, nil
+func Create(detailsSvc authz.UserDetailsSvc, encryptSvc conf.EncryptInfSvc) *Signature {
+	return &Signature{DetailsSvc: detailsSvc, EncryptSvc: encryptSvc}
 }
 
 func (restSign *Signature) CreateSign(params map[string]string, appSecret, timestamp string) (string, error) {
 	return CreateSign(params, appSecret, timestamp)
 }
 
-func (restSign *Signature) Check(token *oauth2.Token) (*oauth2.XyzClaims, error) {
+func (restSign *Signature) Check(token *oauth2.Token) (details *oauth2.UserDetails, err error) {
 	reqAppId := token.Params[oauth2.AppFieldName]
 	reqTimestamp := token.Params[oauth2.TimestampFieldName]
-	if inf, err := restSign.ConfSvc.GetEncryptInf(reqAppId); err != nil {
+	if inf, err := restSign.EncryptSvc.GetEncryptInf(reqAppId); err == nil {
 		appSecret := inf.AppSecret
-		username := inf.Username
-		userId := inf.UserId
 		if sgn, err := restSign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
 			return nil, err
 		} else {
 			if strings.Compare(sgn, token.Value) != 0 {
 				return nil, errors.New("invalid signature")
 			}
-			return &oauth2.XyzClaims{
-				Username: username,
-				UserId:   userId,
-				TenantId: inf.TenantId,
-				RegisteredClaims: jwt.RegisteredClaims{
-					ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-					IssuedAt:  jwt.NewNumericDate(time.Now()),
-					NotBefore: jwt.NewNumericDate(time.Now()),
-					Subject:   username,
-				},
-			}, nil
+			return restSign.DetailsSvc.Get(inf.Username)
 		}
+	} else {
+		return nil, err
 	}
-	return nil, nil
 }
 
 func CreateSign(params map[string]string, appSecret, timestamp string) (string, error) {

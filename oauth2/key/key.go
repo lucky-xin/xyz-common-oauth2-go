@@ -5,7 +5,6 @@ import (
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/oliveagle/jsonpath"
@@ -26,7 +25,7 @@ type RestTokenKey struct {
 	expiresMs  time.Duration
 }
 
-func (rest *RestTokenKey) Get() (byts []byte, err error) {
+func (rest *RestTokenKey) GetTokenKey() (byts []byte, err error) {
 	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
 	if tk != "" {
 		byts = []byte(tk)
@@ -90,7 +89,7 @@ func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKey {
 
 func CreateWithEnv() *RestTokenKey {
 	return &RestTokenKey{
-		rest.CreateWithEnv(),
-		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_CACHE_EXPIRES_MS", 6*time.Hour.Milliseconds())) * time.Millisecond,
+		conf.CreateWithEnv(),
+		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_EXPIRES_MS", 6*time.Hour.Milliseconds())) * time.Millisecond,
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
 	xjwt "github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/jwt"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/signature"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf/rest"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/key"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	"net/http"
@@ -17,7 +17,7 @@ import (
 
 type Checker struct {
 	resolver resolver.TokenResolver
-	tokenKey authz.TokenKey
+	tokenKey authz.TokenKeySvc
 	checkers map[oauth2.TokenType]authz.Checker
 }
 
@@ -27,7 +27,7 @@ func CreateWithEnv() *Checker {
 		oauth2.OAUTH2: xjwt.CreateWithEnv(),
 		oauth2.SIGN:   signature.CreateWithEnv(),
 	}
-	restTokenKey := key.Create(rest.CreateWithEnv(), 6*time.Hour)
+	restTokenKey := key.Create(conf.CreateWithEnv(), 6*time.Hour)
 	return &Checker{
 		resolver: tokenResolver,
 		tokenKey: restTokenKey,
@@ -35,7 +35,9 @@ func CreateWithEnv() *Checker {
 	}
 }
 
-func Create(r resolver.TokenResolver, tk authz.TokenKey, cs map[oauth2.TokenType]authz.Checker) (c *Checker, err error) {
+func Create(r resolver.TokenResolver,
+	tk authz.TokenKeySvc,
+	cs map[oauth2.TokenType]authz.Checker) (c *Checker, err error) {
 	return &Checker{
 		resolver: r, tokenKey: tk, checkers: cs,
 	}, nil
@@ -44,7 +46,7 @@ func Create(r resolver.TokenResolver, tk authz.TokenKey, cs map[oauth2.TokenType
 func (checker *Checker) Authorize() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenKey := key.CreateWithEnv()
-		byts, err := tokenKey.Get()
+		byts, err := tokenKey.GetTokenKey()
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, r.Failed(err.Error()))
 			c.Abort()
@@ -56,7 +58,7 @@ func (checker *Checker) Authorize() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		c.Set("uid", verify.UserId)
+		c.Set("uid", verify.Id)
 		c.Set("uname", verify.Username)
 		c.Set("tid", verify.TenantId)
 		c.Next()
@@ -67,7 +69,7 @@ func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 
-func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzClaims, err error) {
+func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.UserDetails, err error) {
 	delegate := checker.checkers[token.Type]
 	if delegate == nil {
 		err = errors.New(string("unsupported token type:" + token.Type))
@@ -76,7 +78,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzCla
 	return delegate.Check(key, token)
 }
 
-func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {
+func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.UserDetails, error) {
 	t, err := checker.resolver.Resolve(c)
 	if err != nil {
 		return nil, err

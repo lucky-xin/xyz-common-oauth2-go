@@ -1,4 +1,4 @@
-package rest
+package conf
 
 import (
 	"encoding/json"
@@ -35,8 +35,8 @@ func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
 }
 
 func CreateWithEnv() *Svc {
-	expireMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_EXPIRE_MS", 6*time.Hour.Milliseconds())
-	cleanupMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CACHE_CLEANUP_MS", 6*time.Hour.Milliseconds())
+	expireMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_EXPIRE_MS", 6*time.Hour.Milliseconds())
+	cleanupMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CLEANUP_MS", 6*time.Hour.Milliseconds())
 	return Create(
 		env.GetString("OAUTH2_ISSUER_ENDPOINT", "https://127.0.0.1:6666")+"/oauth2/encryption/config",
 		time.Duration(expireMs)*time.Millisecond,

@@ -60,6 +60,18 @@ type XyzClaims struct {
 	UserId   int64  `json:"id" binding:"required"`
 }
 
+type UserDetails struct {
+	Alias       string `json:"alias"`
+	Authorities []struct {
+		Authorities int64  `json:"authorities"`
+		Authority   string `json:"authority"`
+	} `json:"authorities"`
+	DeptId   int64  `json:"deptId"`
+	Id       int64  `json:"id"`
+	TenantId int32  `json:"tenantId"`
+	Username string `json:"username"`
+}
+
 // KeyInf JWT解析key
 type KeyInf struct {
 	Id  string `json:"id" binding:"required"`
@@ -81,6 +93,4 @@ type EncryptionInf struct {
 	TenantId int32 `json:"tenantId" binding:"required"`
 	// 用户名称
 	Username string `json:"username" binding:"required"`
-	// 用户id
-	UserId int64 `json:"userId" binding:"required"`
 }
