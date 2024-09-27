@@ -3,7 +3,6 @@ package wrapper
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
@@ -26,10 +25,7 @@ func CreateWithEnv() *Checker {
 	tokenResolver := resolver.CreateWithEnv()
 	checkers := map[oauth2.TokenType]authz.Checker{
 		oauth2.OAUTH2: xjwt.CreateWithEnv(),
-	}
-	url := env.GetString("OAUTH2_ENCRYPTION_CONF_ENDPOINT", "")
-	if url != "" {
-		checkers[oauth2.SIGN] = signature.CreateWithEnv()
+		oauth2.SIGN:   signature.CreateWithEnv(),
 	}
 	restTokenKey := key.Create(rest.CreateWithEnv(), 6*time.Hour)
 	return &Checker{
