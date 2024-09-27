@@ -47,15 +47,15 @@ func CreateWithEnv() *Svc {
 func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 	key := "app_id:" + appId
 	if val, b := svc.c.Get(key); b {
-		s := val.(oauth2.EncryptionInf)
-		return &s, nil
+		s := val.(*oauth2.EncryptionInf)
+		return s, nil
 	}
 
 	svc.mua.Lock()
 	defer svc.mua.Unlock()
 	if val, b := svc.c.Get(key); b {
-		s := val.(oauth2.EncryptionInf)
-		return &s, nil
+		s := val.(*oauth2.EncryptionInf)
+		return s, nil
 	}
 	var url string
 	queryString := "app_id=" + appId
