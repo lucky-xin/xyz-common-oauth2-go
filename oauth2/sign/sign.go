@@ -58,7 +58,7 @@ func (restSign *Signature) Check(token *oauth2.Token) (details *oauth2.UserDetai
 			details.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Second * 10))
 			details.NotBefore = jwt.NewNumericDate(time.Now())
 			details.IssuedAt = jwt.NewNumericDate(time.Now())
-			return restSign.DetailsSvc.Get(inf.Username)
+			return details, nil
 		}
 	} else {
 		return nil, err

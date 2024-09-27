@@ -9,6 +9,8 @@ import (
 	"github.com/lucky-xin/xyz-common-go/collutil"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/details"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/oliveagle/jsonpath"
@@ -20,30 +22,34 @@ import (
 )
 
 type Checker struct {
-	checkTokenUrl string
-	clientId      string
-	clientSecret  string
-	claimKeyJp    string
-	resolver      resolver.TokenResolver
+	checkTokenUrl  string
+	clientId       string
+	clientSecret   string
+	claimKeyJp     string
+	resolver       resolver.TokenResolver
+	userDetailsSvc authz.UserDetailsSvc
 }
 
 func CreateWithEnv() *Checker {
 	return &Checker{
-		checkTokenUrl: env.GetString("OAUTH2_CHECK_TOKEN_ENDPOINT", ""),
-		clientId:      env.GetString("OAUTH2_CLIENT_ID", ""),
-		clientSecret:  env.GetString("OAUTH2_CLIENT_SECRET", ""),
-		claimKeyJp:    env.GetString("OAUTH2_CLAIMS_KEY_JP", "$.data"),
-		resolver:      resolver.CreateWithEnv(),
+		checkTokenUrl:  env.GetString("OAUTH2_CHECK_TOKEN_ENDPOINT", ""),
+		clientId:       env.GetString("OAUTH2_CLIENT_ID", ""),
+		clientSecret:   env.GetString("OAUTH2_CLIENT_SECRET", ""),
+		claimKeyJp:     env.GetString("OAUTH2_CLAIMS_KEY_JP", "$.data"),
+		resolver:       resolver.CreateWithEnv(),
+		userDetailsSvc: details.CreateWithEnv(),
 	}
 }
 
-func Create(checkTokenUrl, clientId, clientSecret, claimKeyJp string) *Checker {
+func Create(checkTokenUrl, clientId, clientSecret, claimKeyJp string,
+	userDetailsSvc authz.UserDetailsSvc) *Checker {
 	return &Checker{
-		checkTokenUrl: checkTokenUrl,
-		clientId:      clientId,
-		clientSecret:  clientSecret,
-		claimKeyJp:    claimKeyJp,
-		resolver:      resolver.CreateWithEnv(),
+		checkTokenUrl:  checkTokenUrl,
+		clientId:       clientId,
+		clientSecret:   clientSecret,
+		claimKeyJp:     claimKeyJp,
+		resolver:       resolver.CreateWithEnv(),
+		userDetailsSvc: userDetailsSvc,
 	}
 }
 
@@ -51,7 +57,7 @@ func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 	return checker.resolver
 }
 
-func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzClaims, err error) {
+func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.UserDetails, err error) {
 	auth := oauth2.CreateBasicAuth(checker.clientId, checker.clientSecret)
 	reader := strings.NewReader(fmt.Sprintf("token=%s", token.Value))
 	req, err := http.NewRequest(http.MethodPost, checker.checkTokenUrl, reader)
@@ -87,40 +93,29 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.XyzCla
 		log.Println("json path lookup failed,", err.Error())
 		return
 	}
-	u = &oauth2.XyzClaims{
-		RegisteredClaims: jwt.RegisteredClaims{},
-	}
+	u = &oauth2.UserDetails{}
 	origClaims := c.(map[string]interface{})
-	u.RegisteredClaims.Issuer = collutil.StrVal(origClaims, "iss", "")
-	u.RegisteredClaims.Subject = collutil.StrVal(origClaims, "sub", "")
-	u.RegisteredClaims.ID = collutil.StrVal(origClaims, "jti", "")
-	aud := origClaims["aud"]
-	if aud != nil {
-		u.RegisteredClaims.Audience = aud.([]string)
+	username := collutil.StrVal(origClaims, "username", "")
+	u, err = checker.userDetailsSvc.Get(username)
+	if err != nil {
+		return
 	}
-
 	exp := origClaims["exp"]
 	if exp != nil {
-		u.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(time.Unix(int64(exp.(float64)), 0))
+		u.ExpiresAt = jwt.NewNumericDate(time.Unix(int64(exp.(float64)), 0))
 	}
-
 	nbf := origClaims["nbf"]
 	if nbf != nil {
-		u.RegisteredClaims.NotBefore = jwt.NewNumericDate(time.Unix(int64(nbf.(float64)), 0))
+		u.NotBefore = jwt.NewNumericDate(time.Unix(int64(nbf.(float64)), 0))
 	}
-
 	iat := origClaims["iat"]
 	if iat != nil {
-		u.RegisteredClaims.IssuedAt = jwt.NewNumericDate(time.Unix(int64(iat.(float64)), 0))
+		u.IssuedAt = jwt.NewNumericDate(time.Unix(int64(iat.(float64)), 0))
 	}
-
-	u.Username = collutil.StrVal(origClaims, "username", "")
-	u.UserId = collutil.Int64Val(origClaims, "user_id", 0)
-	u.TenantId = collutil.Int32Val(origClaims, "tenant_id", 0)
 	return
 }
 
-func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.XyzClaims, error) {
+func (checker *Checker) CheckWithContext(key []byte, c *gin.Context) (*oauth2.UserDetails, error) {
 	t, err := checker.resolver.Resolve(c)
 	if err != nil {
 		return nil, err
