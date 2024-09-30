@@ -69,8 +69,8 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 		if err != nil {
 			return nil, err
 		}
-		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
+		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
 		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
 		if err != nil {
 			return nil, err

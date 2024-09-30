@@ -63,10 +63,9 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 			return
 		}
 		hexString := res.Data()
-		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
-		var encrypt *encryption.SM2Encryption
-		encrypt, err = encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
 		if err != nil {
 			return nil, err
 		}

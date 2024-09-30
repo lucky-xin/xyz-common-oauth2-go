@@ -3,14 +3,13 @@ package key
 import (
 	"encoding/json"
 	"github.com/lucky-xin/xyz-common-go/env"
+	"github.com/lucky-xin/xyz-common-go/r"
 	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
-	"github.com/oliveagle/jsonpath"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
-	"log"
 	"sync"
 	"time"
 )
@@ -20,12 +19,19 @@ var (
 	mu sync.RWMutex
 )
 
-type RestTokenKey struct {
-	encryptSvc conf.EncryptInfSvc
-	expiresMs  time.Duration
+type TokenKey struct {
+	Id  string `json:"id"`
+	Key string `json:"key"`
+	Alg string `json:"alg"`
 }
 
-func (rest *RestTokenKey) GetTokenKey() (byts []byte, err error) {
+type RestTokenKeySvc struct {
+	encryptSvc conf.EncryptInfSvc
+	expiresMs  time.Duration
+	encryption *encryption.SM2Encryption
+}
+
+func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
 	if tk != "" {
 		byts = []byte(tk)
@@ -43,39 +49,28 @@ func (rest *RestTokenKey) GetTokenKey() (byts []byte, err error) {
 		oauth2TokenKeyUrl := env.GetString("OAUTH2_ISSUER_ENDPOINT", "https://127.0.0.1:6666") + "/oauth2/token-key"
 		appId := env.GetString("OAUTH2_APP_ID", "")
 		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
-		var timestamp, sgn string
-		if appId != "" && appSecret != "" {
-			timestamp, sgn = sign.SignWithTimestamp(appSecret, "")
-		}
+		timestamp, sgn := sign.SignWithTimestamp(appSecret, "")
 		var rbyts []byte
 		rbyts, err = utils.Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
 		if err != nil {
 			return
 		}
-		var resp = map[string]interface{}{}
+		var resp = r.Resp[string]{}
 		err = json.Unmarshal(rbyts, &resp)
 		if err != nil {
 			return
 		}
-		keyJsonPath := env.GetString("OAUTH2_TOKEN_KEY_JP", "$.data.key")
-		var key interface{}
-		key, err = jsonpath.JsonPathLookup(resp, keyJsonPath)
+		var tokenKeyText string
+		tokenKeyText, err = rest.encryption.Decrypt(resp.Data(), sm2.C1C3C2)
 		if err != nil {
-			log.Println("json path lookup failed,", err.Error())
+			return nil, err
+		}
+		var t = TokenKey{}
+		err = json.Unmarshal([]byte(tokenKeyText), &t)
+		if err != nil {
 			return
 		}
-		hexTokenKey := key.(string)
-		privateKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_TOKEN_KEY_SM2_PUBLIC_KEY", "")
-		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
-		if err != nil {
-			return nil, err
-		}
-		tk, err = encrypt.Decrypt(hexTokenKey, sm2.C1C3C2)
-		if err != nil {
-			return nil, err
-		}
-		byts = []byte(tk)
+		byts = []byte(t.Key)
 		c.Set(cacheKey, byts, rest.expiresMs)
 	} else {
 		byts = tokenKey.([]byte)
@@ -83,13 +78,19 @@ func (rest *RestTokenKey) GetTokenKey() (byts []byte, err error) {
 	return
 }
 
-func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKey {
-	return &RestTokenKey{svc, expiresMs}
+func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKeySvc {
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+	if err != nil {
+		panic(err)
+	}
+	return &RestTokenKeySvc{encryptSvc: svc, expiresMs: expiresMs, encryption: encrypt}
 }
 
-func CreateWithEnv() *RestTokenKey {
-	return &RestTokenKey{
+func CreateWithEnv() *RestTokenKeySvc {
+	return Create(
 		conf.CreateWithEnv(),
-		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_EXPIRES_MS", 6*time.Hour.Milliseconds())) * time.Millisecond,
-	}
+		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_EXPIRES_MS", 6*time.Hour.Milliseconds()))*time.Millisecond,
+	)
 }

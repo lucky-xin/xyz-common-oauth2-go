@@ -3,6 +3,7 @@ package samples
 import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz/intro"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/details"
 	"testing"
 )
 
@@ -11,6 +12,7 @@ func TestExtractIntroToken(t *testing.T) {
 		"",
 		"",
 		"$",
+		details.CreateWithEnv(),
 	)
 	token := &oauth2.Token{
 		Type:  oauth2.OAUTH2,
