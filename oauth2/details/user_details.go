@@ -69,13 +69,8 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 		if err != nil {
 			return nil, err
 		}
-		var plaintext string
-		plaintext, err = encrypt.Decrypt(hexString, sm2.C1C3C2)
-		if err != nil {
-			return nil, err
-		}
 		details = &oauth2.UserDetails{}
-		err = json.Unmarshal([]byte(plaintext), &details)
+		err = encrypt.DecryptObject(hexString, sm2.C1C3C2, details)
 		if err != nil {
 			return nil, err
 		}

@@ -75,12 +75,8 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 		if err != nil {
 			return nil, err
 		}
-		plaintext, err := encrypt.Decrypt(resp2.BizData, sm2.C1C3C2)
-		if err != nil {
-			return nil, err
-		}
 		var conf = &oauth2.EncryptionInf{}
-		err = json.Unmarshal([]byte(plaintext), conf)
+		err = encrypt.DecryptObject(resp2.BizData, sm2.C1C3C2, conf)
 		if err != nil {
 			return nil, err
 		}
