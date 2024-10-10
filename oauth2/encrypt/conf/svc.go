@@ -23,14 +23,23 @@ type Svc struct {
 	appSecret string
 
 	mua sync.RWMutex
+
+	encrypt *encryption.SM2Encryption
 }
 
 func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+	if err != nil {
+		panic(err)
+	}
 	return &Svc{
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(expireMs, cleanupMs),
 		appId:             env.GetString("OAUTH2_APP_ID", ""),
 		appSecret:         env.GetString("OAUTH2_APP_SECRET", ""),
+		encrypt:           encrypt,
 	}
 }
 
@@ -64,19 +73,13 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 	if respBytes, err := utils.Get(url, sgn, appId, timestamp); err != nil {
 		return nil, err
 	} else {
-		var resp2 = &r.Resp[string]{}
-		err = json.Unmarshal(respBytes, resp2)
-		if err != nil {
-			return nil, err
-		}
-		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+		var resp = &r.Resp[string]{}
+		err = json.Unmarshal(respBytes, resp)
 		if err != nil {
 			return nil, err
 		}
 		var conf = &oauth2.EncryptionInf{}
-		err = encrypt.DecryptObject(resp2.BizData, sm2.C1C3C2, conf)
+		err = svc.encrypt.DecryptObject(resp.BizData, sm2.C1C3C2, conf)
 		if err != nil {
 			return nil, err
 		}
