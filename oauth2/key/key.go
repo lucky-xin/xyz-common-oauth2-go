@@ -60,13 +60,11 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 		if err != nil {
 			return
 		}
-		var tokenKeyText string
-		tokenKeyText, err = rest.encryption.Decrypt(resp.Data(), sm2.C1C3C2)
+		var t = &TokenKey{}
+		err = rest.encryption.DecryptObject(resp.Data(), sm2.C1C3C2, t)
 		if err != nil {
 			return nil, err
 		}
-		var t = TokenKey{}
-		err = json.Unmarshal([]byte(tokenKeyText), &t)
 		if err != nil {
 			return
 		}
