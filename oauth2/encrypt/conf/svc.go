@@ -24,13 +24,13 @@ type Svc struct {
 
 	mua sync.RWMutex
 
-	encrypt *encryption.SM2Encryption
+	encrypt *encryption.SM2
 }
 
 func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
 	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
 	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-	encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
 	if err != nil {
 		panic(err)
 	}

@@ -28,7 +28,7 @@ type TokenKey struct {
 type RestTokenKeySvc struct {
 	encryptSvc conf.EncryptInfSvc
 	expiresMs  time.Duration
-	encryption *encryption.SM2Encryption
+	encryption *encryption.SM2
 }
 
 func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
@@ -79,7 +79,7 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKeySvc {
 	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
 	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-	encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
 	if err != nil {
 		panic(err)
 	}

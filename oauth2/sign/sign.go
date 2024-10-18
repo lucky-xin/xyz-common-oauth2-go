@@ -41,8 +41,8 @@ func (restSign *Signature) CreateSign(params map[string]string, appSecret, times
 }
 
 func (restSign *Signature) Check(token *oauth2.Token) (details *oauth2.UserDetails, err error) {
-	reqAppId := token.Params[oauth2.AppFieldName]
-	reqTimestamp := token.Params[oauth2.TimestampFieldName]
+	reqAppId := token.Params[oauth2.APP_ID_HEADER_NAME]
+	reqTimestamp := token.Params[oauth2.TIMESTAMP_HEADER_NAME]
 	if inf, err := restSign.EncryptSvc.GetEncryptInf(reqAppId); err == nil {
 		appSecret := inf.AppSecret
 		if sgn, err := restSign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
@@ -75,7 +75,7 @@ func CreateSign(params map[string]string, appSecret, timestamp string) (string, 
 	length := len(keys)
 	for idx := range keys {
 		key := keys[idx]
-		if oauth2.AppFieldName == key || oauth2.TimestampFieldName == key {
+		if oauth2.APP_ID_HEADER_NAME == key || oauth2.TIMESTAMP_HEADER_NAME == key {
 			continue
 		}
 		buffer.WriteString(fmt.Sprintf("%v", params[key]))

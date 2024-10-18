@@ -35,8 +35,8 @@ func TestOAUth2CliTest(tet *testing.T) {
 	url := "http://127.0.0.1:6666/oauth2/token-key"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("Authorization", "Signature "+sgn)
-	req.Header.Set(oauth2.AppFieldName, appId)
-	req.Header.Set(oauth2.TimestampFieldName, timestamp)
+	req.Header.Set(oauth2.APP_ID_HEADER_NAME, appId)
+	req.Header.Set(oauth2.TIMESTAMP_HEADER_NAME, timestamp)
 	resp, err := client.Do(req)
 
 	if err != nil {
