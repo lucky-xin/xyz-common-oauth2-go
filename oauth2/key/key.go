@@ -28,7 +28,7 @@ type TokenKey struct {
 type RestTokenKeySvc struct {
 	encryptSvc conf.EncryptInfSvc
 	expiresMs  time.Duration
-	encryption *encryption.SM2Encryption
+	encryption *encryption.SM2
 }
 
 func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
@@ -60,13 +60,13 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 		if err != nil {
 			return
 		}
-		var tokenKeyText string
-		tokenKeyText, err = rest.encryption.Decrypt(resp.Data(), sm2.C1C3C2)
+		var tokenKeyText []byte
+		tokenKeyText, err = rest.encryption.Decrypt([]byte(resp.Data()), sm2.C1C3C2)
 		if err != nil {
 			return nil, err
 		}
 		var t = TokenKey{}
-		err = json.Unmarshal([]byte(tokenKeyText), &t)
+		err = json.Unmarshal(tokenKeyText, &t)
 		if err != nil {
 			return
 		}
@@ -81,7 +81,7 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKeySvc {
 	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
 	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-	encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
 	if err != nil {
 		panic(err)
 	}

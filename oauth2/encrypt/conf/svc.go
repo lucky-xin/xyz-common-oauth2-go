@@ -22,11 +22,19 @@ type Svc struct {
 	// 当前应用appSecret
 	appSecret string
 
-	mua sync.RWMutex
+	mua     sync.RWMutex
+	encrypt *encryption.SM2
 }
 
 func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
+	if err != nil {
+		panic(err)
+	}
 	return &Svc{
+		encrypt:           encrypt,
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(expireMs, cleanupMs),
 		appId:             env.GetString("OAUTH2_APP_ID", ""),
@@ -69,14 +77,8 @@ func (svc *Svc) GetEncryptInf(appId string) (*oauth2.EncryptionInf, error) {
 		if err != nil {
 			return nil, err
 		}
-		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-		encrypt, err := encryption.NewSM2Encryption(publicKeyHex, privateKeyHex)
-		if err != nil {
-			return nil, err
-		}
 		var conf = &oauth2.EncryptionInf{}
-		err = encrypt.DecryptObject(resp2.BizData, sm2.C1C3C2, conf)
+		err = svc.encrypt.DecryptObject(resp2.BizData, sm2.C1C3C2, conf)
 		if err != nil {
 			return nil, err
 		}
