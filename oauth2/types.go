@@ -107,3 +107,11 @@ type EncryptionInf struct {
 	// 用户名称
 	Username string `json:"username" binding:"required"`
 }
+
+func (details *UserDetails) MarshalBinary() (data []byte, err error) {
+	return json.Marshal(details)
+}
+
+func (details *UserDetails) UnmarshalBinary(data []byte) (err error) {
+	return json.Unmarshal(data, details)
+}
