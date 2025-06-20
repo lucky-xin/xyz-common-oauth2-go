@@ -63,17 +63,17 @@ type XyzClaims struct {
 }
 
 type UserDetails struct {
+	Id          int64  `json:"id"`
+	TenantId    int32  `json:"tenantId"`
+	Username    string `json:"username"`
 	Alias       string `json:"alias"`
 	Authorities []struct {
 		Authorities int64  `json:"authorities"`
 		Authority   string `json:"authority"`
 	} `json:"authorities"`
-	DeptId    int64  `json:"deptId"`
-	RoleIds   int64  `json:"roleIds"`
-	RoleTypes int64  `json:"roleTypes"`
-	Id        int64  `json:"id"`
-	TenantId  int32  `json:"tenantId"`
-	Username  string `json:"username"`
+	DeptId    int64   `json:"deptId"`
+	RoleIds   []int64 `json:"roleIds"`
+	RoleTypes []int64 `json:"roleTypes"`
 
 	// the `exp` (Expiration Time) claim. See https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4
 	ExpiresAt *jwt.NumericDate `json:"exp,omitempty"`
