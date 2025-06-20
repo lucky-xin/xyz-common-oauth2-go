@@ -65,8 +65,6 @@ func (d DefaultTokenResolver) createToken(authorization string, c *gin.Context) 
 }
 
 func parseSign(c *gin.Context, t *oauth2.Token) (err error) {
-	appId := c.GetHeader(oauth2.AppFieldName)
-	timestamp := c.GetHeader(oauth2.TimestampFieldName)
 	t.Params = map[string]string{}
 	if c.ContentType() == "application/json" {
 		err = c.BindJSON(&t.Params)
@@ -81,8 +79,8 @@ func parseSign(c *gin.Context, t *oauth2.Token) (err error) {
 			t.Params[k] = strings.Join(v, ",")
 		}
 	}
-	t.Params[oauth2.AppFieldName] = appId
-	t.Params[oauth2.TimestampFieldName] = timestamp
+	t.Params[oauth2.APP_ID_HEADER_NAME] = c.GetHeader(oauth2.APP_ID_HEADER_NAME)
+	t.Params[oauth2.TIMESTAMP_HEADER_NAME] = c.GetHeader(oauth2.TIMESTAMP_HEADER_NAME)
 	return nil
 }
 

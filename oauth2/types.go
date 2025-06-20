@@ -9,11 +9,13 @@ import (
 type TokenType string
 
 var (
-	OAUTH2             TokenType = "OAuth2"
-	SIGN               TokenType = "Signature"
-	INTRO              TokenType = "INTRO"
-	AppFieldName                 = "App-Id"
-	TimestampFieldName           = "Timestamp"
+	OAUTH2                    TokenType = "OAuth2"
+	SIGN                      TokenType = "Signature"
+	INTRO                     TokenType = "INTRO"
+	APP_ID_HEADER_NAME                  = "App-Id"
+	TIMESTAMP_HEADER_NAME               = "Timestamp"
+	AUTHORIZATION_PARAM_NAME            = "authz"
+	AUTHORIZATION_HEADER_NAME           = "Authorization"
 )
 
 func (m *TokenType) MarshalBinary() ([]byte, error) {

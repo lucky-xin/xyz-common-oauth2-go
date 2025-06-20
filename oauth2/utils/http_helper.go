@@ -24,8 +24,8 @@ func Get(url, sgn, appId, timestamp string) ([]byte, error) {
 	} else {
 		if sgn != "" {
 			req.Header.Set("Authorization", "Signature "+sgn)
-			req.Header.Set(oauth2.AppFieldName, appId)
-			req.Header.Set(oauth2.TimestampFieldName, timestamp)
+			req.Header.Set(oauth2.APP_ID_HEADER_NAME, appId)
+			req.Header.Set(oauth2.TIMESTAMP_HEADER_NAME, timestamp)
 		}
 		if resp, err := HttpClient.Do(req); err == nil {
 			defer func(Body io.ReadCloser) {
