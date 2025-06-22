@@ -39,8 +39,8 @@ func (d DefaultTokenResolver) Resolve(c *gin.Context) (t *oauth2.Token, err erro
 		log.Print("access token from header")
 		return d.createToken(authorization, c)
 	}
-	token := c.Query(d.paramTokenName)
-	if token != "" {
+	authorization = c.Query(d.paramTokenName)
+	if authorization != "" {
 		log.Print("access token from query")
 		return d.createToken(authorization, c)
 	}
