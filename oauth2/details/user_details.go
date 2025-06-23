@@ -62,7 +62,7 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 		var res = r.Resp[string]{}
 		err = json.Unmarshal(byts, &res)
 		if err != nil {
-			return
+			return nil, err
 		}
 		hexString := res.Data()
 		log.Println("hexString:", hexString)
