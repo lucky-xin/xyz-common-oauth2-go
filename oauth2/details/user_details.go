@@ -10,6 +10,7 @@ import (
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
+	"log"
 	"net/url"
 	"sync"
 	"time"
@@ -29,7 +30,7 @@ func Create(expiresMs time.Duration) *RestUserDetailsSvc {
 }
 
 func CreateWithEnv() *RestUserDetailsSvc {
-	expireMs := env.GetInt64("OAUTH2_USER_DETAILS_EXPIRE_MS", 30*time.Second.Milliseconds())
+	expireMs := env.GetInt64("OAUTH2_USER_DETAILS_EXPIRE_MS", 12*time.Hour.Milliseconds())
 	return Create(
 		time.Duration(expireMs) * time.Millisecond,
 	)
@@ -53,6 +54,7 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 		timestamp, sgn = sign.SignWithTimestamp(appSecret, queryString)
 		var rbyts []byte
 		uri := userDetailsUrl + "?username=" + url.QueryEscape(username)
+		log.Println(uri)
 		rbyts, err = utils.Get(uri, sgn, appId, timestamp)
 		if err != nil {
 			return
@@ -63,6 +65,7 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 			return
 		}
 		hexString := res.Data()
+		log.Println("hexString:", hexString)
 		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
 		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
 		encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
@@ -70,6 +73,7 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 			return nil, err
 		}
 		details = &oauth2.UserDetails{}
+		log.Println("DecryptObject...")
 		err = encrypt.DecryptObject(hexString, sm2.C1C3C2, details)
 		if err != nil {
 			return nil, err
