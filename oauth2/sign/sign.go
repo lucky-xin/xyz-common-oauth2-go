@@ -56,7 +56,7 @@ func (restSign *Signature) CreateSign(params map[string]string, appSecret, times
 			continue
 		}
 		vals.Add(key, params[key])
-		buffer.WriteString(fmt.Sprintf("%v", params[key]))
+		buffer.WriteString(fmt.Sprintf("%s=%v", key, params[key]))
 		if idx != length-1 {
 			buffer.WriteString("&")
 		}
