@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
-	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
 	"log"
-	"net/url"
 	"sync"
 	"time"
 )
@@ -23,16 +21,26 @@ var (
 
 type RestUserDetailsSvc struct {
 	expiresMs time.Duration
+	sm2       *encryption.SM2
+	signature *sign.Signature
 }
 
-func Create(expiresMs time.Duration) *RestUserDetailsSvc {
-	return &RestUserDetailsSvc{expiresMs}
+func Create(expiresMs time.Duration, sm2 *encryption.SM2, signature *sign.Signature) *RestUserDetailsSvc {
+	return &RestUserDetailsSvc{expiresMs: expiresMs, sm2: sm2, signature: signature}
 }
 
 func CreateWithEnv() *RestUserDetailsSvc {
 	expireMs := env.GetInt64("OAUTH2_USER_DETAILS_EXPIRE_MS", 12*time.Hour.Milliseconds())
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
+	if err != nil {
+		println(err)
+	}
 	return Create(
-		time.Duration(expireMs) * time.Millisecond,
+		time.Duration(expireMs)*time.Millisecond,
+		encrypt,
+		sign.CreateWithEnv(),
 	)
 }
 
@@ -47,34 +55,20 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 		}
 
 		userDetailsUrl := env.GetString("OAUTH2_ISSUER_ENDPOINT", "https://127.0.0.1:6666") + "/oauth2/user/details"
-		appId := env.GetString("OAUTH2_APP_ID", "")
-		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
-		var timestamp, sgn string
-		queryString := "username=" + username
-		timestamp, sgn = sign.SignWithTimestamp(appSecret, queryString)
-		var rbyts []byte
-		uri := userDetailsUrl + "?username=" + url.QueryEscape(username)
-		log.Println(uri)
-		rbyts, err = utils.Get(uri, sgn, appId, timestamp)
+		byts, err := rest.signature.SignGet(userDetailsUrl, map[string]string{"username": username})
 		if err != nil {
-			return
+			return nil, err
 		}
 		var res = r.Resp[string]{}
-		err = json.Unmarshal(rbyts, &res)
+		err = json.Unmarshal(byts, &res)
 		if err != nil {
 			return
 		}
 		hexString := res.Data()
 		log.Println("hexString:", hexString)
-		privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
-		publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-		encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
-		if err != nil {
-			return nil, err
-		}
 		details = &oauth2.UserDetails{}
 		log.Println("DecryptObject...")
-		err = encrypt.DecryptObject(hexString, sm2.C1C3C2, details)
+		err = rest.sm2.DecryptObject(hexString, sm2.C1C3C2, details)
 		if err != nil {
 			return nil, err
 		}

@@ -19,7 +19,7 @@ type Checker interface {
 // Signature 数字签名接口
 type Signature interface {
 	// CreateSign 新建数字签名
-	CreateSign(params map[string]string, appSecret, timestamp string) (string, error)
+	CreateSign(params map[string]string, appSecret, timestamp string) (string, string, error)
 	// Check 检验数字签名
 	Check(token *oauth2.Token) (*oauth2.UserDetails, error)
 }

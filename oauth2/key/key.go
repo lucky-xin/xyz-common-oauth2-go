@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"github.com/lucky-xin/xyz-common-go/env"
 	"github.com/lucky-xin/xyz-common-go/r"
-	"github.com/lucky-xin/xyz-common-go/sign"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/encrypt/conf"
-	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/utils"
+	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/sign"
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
@@ -28,7 +27,8 @@ type TokenKey struct {
 type RestTokenKeySvc struct {
 	encryptSvc conf.EncryptInfSvc
 	expiresMs  time.Duration
-	encryption *encryption.SM2
+	sm2        *encryption.SM2
+	signature  *sign.Signature
 }
 
 func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
@@ -47,28 +47,24 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 		}
 
 		oauth2TokenKeyUrl := env.GetString("OAUTH2_ISSUER_ENDPOINT", "https://127.0.0.1:6666") + "/oauth2/token-key"
-		appId := env.GetString("OAUTH2_APP_ID", "")
-		appSecret := env.GetString("OAUTH2_APP_SECRET", "")
-		timestamp, sgn := sign.SignWithTimestamp(appSecret, "")
-		var rbyts []byte
-		rbyts, err = utils.Get(oauth2TokenKeyUrl, sgn, appId, timestamp)
+		rbyts, err := rest.signature.SignGet(oauth2TokenKeyUrl, map[string]string{})
 		if err != nil {
-			return
+			return nil, err
 		}
 		var resp = r.Resp[string]{}
 		err = json.Unmarshal(rbyts, &resp)
 		if err != nil {
-			return
+			return nil, err
 		}
 		var tokenKeyText []byte
-		tokenKeyText, err = rest.encryption.DecryptHex(resp.Data(), sm2.C1C3C2)
+		tokenKeyText, err = rest.sm2.DecryptHex(resp.Data(), sm2.C1C3C2)
 		if err != nil {
 			return nil, err
 		}
 		var t = TokenKey{}
 		err = json.Unmarshal(tokenKeyText, &t)
 		if err != nil {
-			return
+			return nil, err
 		}
 		byts = []byte(t.Key)
 		c.Set(cacheKey, byts, rest.expiresMs)
@@ -83,9 +79,13 @@ func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKeySvc {
 	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
 	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
 	if err != nil {
-		panic(err)
+		println(err)
 	}
-	return &RestTokenKeySvc{encryptSvc: svc, expiresMs: expiresMs, encryption: encrypt}
+	return &RestTokenKeySvc{encryptSvc: svc,
+		expiresMs: expiresMs,
+		sm2:       encrypt,
+		signature: sign.CreateWithEnv(),
+	}
 }
 
 func CreateWithEnv() *RestTokenKeySvc {
