@@ -8,7 +8,6 @@ import (
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/authz"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/details"
 	"github.com/lucky-xin/xyz-common-oauth2-go/oauth2/resolver"
-	"log"
 )
 
 // Checker JWT校验器
@@ -40,17 +39,14 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (userDetails *oau
 		jwt.WithValidMethods(checker.ValidMethods),
 		jwt.WithoutClaimsValidation(),
 	)
-	log.Printf("parse token...")
 	if _, err := parser.ParseWithClaims(token.Value, claims, func(token *jwt.Token) (interface{}, error) {
 		return key, nil
 	}); err == nil {
 		if checker.detailsSvc != nil {
-			log.Printf("get user details...")
 			userDetails, err = checker.detailsSvc.Get(claims.Username)
 			if err != nil {
 				return nil, err
 			}
-			log.Printf("get user details end.")
 			userDetails.ExpiresAt = claims.ExpiresAt
 			userDetails.NotBefore = claims.NotBefore
 			userDetails.IssuedAt = claims.IssuedAt

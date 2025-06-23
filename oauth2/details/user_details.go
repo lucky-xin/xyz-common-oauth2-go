@@ -9,7 +9,6 @@ import (
 	"github.com/lucky-xin/xyz-gmsm-go/encryption"
 	"github.com/patrickmn/go-cache"
 	"github.com/tjfoc/gmsm/sm2"
-	"log"
 	"sync"
 	"time"
 )
@@ -65,9 +64,7 @@ func (rest *RestUserDetailsSvc) Get(username string) (details *oauth2.UserDetail
 			return nil, err
 		}
 		hexString := res.Data()
-		log.Println("hexString:", hexString)
 		details = &oauth2.UserDetails{}
-		log.Println("DecryptObject...")
 		err = rest.sm2.DecryptObject(hexString, sm2.C1C3C2, details)
 		if err != nil {
 			return nil, err
