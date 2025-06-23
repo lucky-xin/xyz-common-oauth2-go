@@ -61,7 +61,7 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 			return
 		}
 		var tokenKeyText []byte
-		tokenKeyText, err = rest.encryption.Decrypt([]byte(resp.Data()), sm2.C1C2C3)
+		tokenKeyText, err = rest.encryption.Decrypt([]byte(resp.Data()), sm2.C1C3C2)
 		if err != nil {
 			return nil, err
 		}
