@@ -26,15 +26,9 @@ type Svc struct {
 	encrypt *encryption.SM2
 }
 
-func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
-	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
-	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
-	if err != nil {
-		panic(err)
-	}
+func Create(encryptionConfUrl string, sm2 *encryption.SM2, expireMs, cleanupMs time.Duration) *Svc {
 	return &Svc{
-		encrypt:           encrypt,
+		encrypt:           sm2,
 		EncryptionConfUrl: encryptionConfUrl,
 		c:                 cache.New(expireMs, cleanupMs),
 		appId:             env.GetString("OAUTH2_APP_ID", ""),
@@ -45,8 +39,15 @@ func Create(encryptionConfUrl string, expireMs, cleanupMs time.Duration) *Svc {
 func CreateWithEnv() *Svc {
 	expireMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_EXPIRE_MS", 6*time.Hour.Milliseconds())
 	cleanupMs := env.GetInt64("OAUTH2_ENCRYPTION_CONF_CLEANUP_MS", 6*time.Hour.Milliseconds())
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
+	if err != nil {
+		panic(err)
+	}
 	return Create(
 		env.GetString("OAUTH2_ISSUER_ENDPOINT", "https://127.0.0.1:6666")+"/oauth2/encryption/config",
+		encrypt,
 		time.Duration(expireMs)*time.Millisecond,
 		time.Duration(cleanupMs)*time.Millisecond,
 	)

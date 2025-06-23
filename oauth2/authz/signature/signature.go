@@ -26,7 +26,8 @@ func CreateWithEnv() *Checker {
 	return Create(signature, details.CreateWithEnv(), conf.CreateWithEnv(), resolver.CreateWithEnv())
 }
 
-func Create(signature *osign.Signature,
+func Create(
+	signature *osign.Signature,
 	detailsSvc authz.UserDetailsSvc,
 	encryptSvc conf.EncryptInfSvc,
 	resolver resolver.TokenResolver) *Checker {

@@ -31,6 +31,30 @@ type RestTokenKeySvc struct {
 	signature  *sign.Signature
 }
 
+func Create(svc conf.EncryptInfSvc, signature *sign.Signature, sm2 *encryption.SM2, expiresMs time.Duration) *RestTokenKeySvc {
+	return &RestTokenKeySvc{
+		encryptSvc: svc,
+		expiresMs:  expiresMs,
+		sm2:        sm2,
+		signature:  signature,
+	}
+}
+
+func CreateWithEnv() *RestTokenKeySvc {
+	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
+	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
+	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
+	if err != nil {
+		println(err)
+	}
+	return Create(
+		conf.CreateWithEnv(),
+		sign.CreateWithEnv(),
+		encrypt,
+		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_EXPIRES_MS", 6*time.Hour.Milliseconds()))*time.Millisecond,
+	)
+}
+
 func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 	tk := env.GetString("OAUTH2_TOKEN_KEY", "")
 	if tk != "" {
@@ -72,25 +96,4 @@ func (rest *RestTokenKeySvc) GetTokenKey() (byts []byte, err error) {
 		byts = tokenKey.([]byte)
 	}
 	return
-}
-
-func Create(svc conf.EncryptInfSvc, expiresMs time.Duration) *RestTokenKeySvc {
-	privateKeyHex := env.GetString("OAUTH2_SM2_PRIVATE_KEY", "")
-	publicKeyHex := env.GetString("OAUTH2_SM2_PUBLIC_KEY", "")
-	encrypt, err := encryption.NewSM2(publicKeyHex, privateKeyHex)
-	if err != nil {
-		println(err)
-	}
-	return &RestTokenKeySvc{encryptSvc: svc,
-		expiresMs: expiresMs,
-		sm2:       encrypt,
-		signature: sign.CreateWithEnv(),
-	}
-}
-
-func CreateWithEnv() *RestTokenKeySvc {
-	return Create(
-		conf.CreateWithEnv(),
-		time.Duration(env.GetInt64("OAUTH2_TOKEN_KEY_EXPIRES_MS", 6*time.Hour.Milliseconds()))*time.Millisecond,
-	)
 }
