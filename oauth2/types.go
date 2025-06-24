@@ -33,23 +33,17 @@ func (m *TokenType) UnmarshalBinary(data []byte) error {
 // Token 信息
 type Token struct {
 	// Type Token类型
-	Type TokenType `json:"type" binding:"required" redis:"type"`
+	Type TokenType `json:"type" redis:"type"`
 	// Token值
-	AccessToken string `json:"access_token" binding:"required" redis:"value"`
+	AccessToken string `json:"access_token" redis:"value"`
 	// 刷新token
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token" redis:"refresh_token"`
 	// Token scope
-	Scope string `json:"scope"`
+	Scope string `json:"scope" redis:"refresh_token"`
 	// token有效期
-	ExpiresIn int `json:"expires_in"`
-	// 租户id
-	Tid int64 `json:"tid" binding:"tid" redis:"tid"`
-	// 用户id
-	Uid int64 `json:"uid" binding:"required" redis:"uid"`
-	// 用户名称
-	Uname string `json:"uname" binding:"uname" redis:"uname"`
+	ExpiresIn int `json:"expires_in" redis:"refresh_token"`
 	// 扩展参数
-	Params map[string]string `json:"params" binding:"required" redis:"params"`
+	Params map[string]string `json:"params" redis:"params"`
 }
 
 func (m *Token) MarshalBinary() ([]byte, error) {
