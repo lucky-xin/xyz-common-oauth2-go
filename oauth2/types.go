@@ -39,9 +39,9 @@ type Token struct {
 	// 刷新token
 	RefreshToken string `json:"refresh_token" redis:"refresh_token"`
 	// Token scope
-	Scope string `json:"scope" redis:"refresh_token"`
+	Scope string `json:"scope" redis:"scope"`
 	// token有效期
-	ExpiresIn int `json:"expires_in" redis:"refresh_token"`
+	ExpiresIn int `json:"expires_in" redis:"expires_in"`
 	// 扩展参数
 	Params map[string]string `json:"params" redis:"params"`
 }
