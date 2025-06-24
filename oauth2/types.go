@@ -35,7 +35,13 @@ type Token struct {
 	// Type Token类型
 	Type TokenType `json:"type" binding:"required" redis:"type"`
 	// Token值
-	Value string `json:"value" binding:"required" redis:"value"`
+	AccessToken string `json:"access_token" binding:"required" redis:"value"`
+	// 刷新token
+	RefreshToken string `json:"refresh_token"`
+	// Token scope
+	Scope string `json:"scope"`
+	// token有效期
+	ExpiresIn int `json:"expires_in"`
 	// 租户id
 	Tid int64 `json:"tid" binding:"tid" redis:"tid"`
 	// 用户id
