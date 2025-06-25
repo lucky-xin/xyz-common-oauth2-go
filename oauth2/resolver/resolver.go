@@ -51,7 +51,7 @@ func (d DefaultTokenResolver) createToken(authorization string, c *gin.Context) 
 	split := strings.Split(authorization, " ")
 	if len(split) == 2 {
 		tt := oauth2.TokenType(strings.TrimSpace(split[0]))
-		t = &oauth2.Token{Type: tt, Value: strings.TrimSpace(split[1])}
+		t = &oauth2.Token{Type: tt, AccessToken: strings.TrimSpace(split[1])}
 		p := parses[tt]
 		if p == nil {
 			err = errors.New("invalid token type")
@@ -60,7 +60,7 @@ func (d DefaultTokenResolver) createToken(authorization string, c *gin.Context) 
 		err = p(c, t)
 		return
 	}
-	t = &oauth2.Token{Type: oauth2.OAUTH2, Value: strings.TrimSpace(split[0])}
+	t = &oauth2.Token{Type: oauth2.OAUTH2, AccessToken: strings.TrimSpace(split[0])}
 	return
 }
 

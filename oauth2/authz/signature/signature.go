@@ -51,7 +51,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (details *oauth2.
 		if _, sgn, err := checker.sign.CreateSign(token.Params, appSecret, reqTimestamp); err != nil {
 			return nil, err
 		} else {
-			if strings.Compare(sgn, token.Value) != 0 {
+			if strings.Compare(sgn, token.AccessToken) != 0 {
 				return nil, errors.New("invalid signature")
 			}
 			details, err = checker.detailsSvc.Get(inf.Username)

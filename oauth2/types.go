@@ -54,6 +54,10 @@ func (m *Token) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, m)
 }
 
+func (m *Token) AuthorizationHeader() string {
+	return string(m.Type) + " " + m.AccessToken
+}
+
 // XyzClaims 自定义JWT claims
 type XyzClaims struct {
 	jwt.RegisteredClaims

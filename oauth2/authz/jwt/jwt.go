@@ -39,7 +39,7 @@ func (checker *Checker) Check(key []byte, token *oauth2.Token) (userDetails *oau
 		jwt.WithValidMethods(checker.ValidMethods),
 		jwt.WithoutClaimsValidation(),
 	)
-	if _, err := parser.ParseWithClaims(token.Value, claims, func(token *jwt.Token) (interface{}, error) {
+	if _, err := parser.ParseWithClaims(token.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return key, nil
 	}); err == nil {
 		if checker.detailsSvc != nil {

@@ -59,7 +59,7 @@ func (checker *Checker) GetTokenResolver() resolver.TokenResolver {
 
 func (checker *Checker) Check(key []byte, token *oauth2.Token) (u *oauth2.UserDetails, err error) {
 	auth := oauth2.CreateBasicAuth(checker.clientId, checker.clientSecret)
-	reader := strings.NewReader(fmt.Sprintf("token=%s", token.Value))
+	reader := strings.NewReader(fmt.Sprintf("token=%s", token.AccessToken))
 	req, err := http.NewRequest(http.MethodPost, checker.checkTokenUrl, reader)
 	if err != nil {
 		return
